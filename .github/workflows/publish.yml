@@ -1,0 +1,89 @@
+name: Publish
+
+# Publishes semantic-versioned NuGet packages, but only for the projects
+# whose sources actually changed. Versions come from git tags via MinVer
+# (tag releases as v1.2.3); `--skip-duplicate` makes republishing idempotent,
+# so a package version that already exists on NuGet is skipped.
+#
+# Setup: add a nuget.org API key as the NUGET_API_KEY repository secret.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v[0-9]*.[0-9]*.[0-9]*']
+
+permissions:
+  contents: read
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      eventaggregator: ${{ steps.filter.outputs.eventaggregator }}
+      statemachine: ${{ steps.filter.outputs.statemachine }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed packages
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            eventaggregator:
+              - 'src/RoguelikeToolkit.EventAggregator/**'
+              - 'Directory.Build.props'
+              - 'global.json'
+            statemachine:
+              - 'src/RoguelikeToolkit.StateMachine/**'
+              - 'Directory.Build.props'
+              - 'global.json'
+
+  publish:
+    needs: detect-changes
+    # Tag builds (v*) publish both packages; branch pushes publish only what changed.
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') ||
+      needs.detect-changes.outputs.eventaggregator == 'true' ||
+      needs.detect-changes.outputs.statemachine == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore -c Release
+
+      - name: Test
+        run: dotnet test --no-build -c Release
+
+      - name: Pack EventAggregator
+        if: startsWith(github.ref, 'refs/tags/v') || needs.detect-changes.outputs.eventaggregator == 'true'
+        run: dotnet pack src/RoguelikeToolkit.EventAggregator/RoguelikeToolkit.EventAggregator.csproj --no-build -c Release -o ./nupkgs
+
+      - name: Pack StateMachine
+        if: startsWith(github.ref, 'refs/tags/v') || needs.detect-changes.outputs.statemachine == 'true'
+        run: dotnet pack src/RoguelikeToolkit.StateMachine/RoguelikeToolkit.StateMachine.csproj --no-build -c Release -o ./nupkgs
+
+      - name: Push to NuGet
+        run: |
+          if compgen -G "./nupkgs/*.nupkg" > /dev/null; then
+            dotnet nuget push "./nupkgs/*.nupkg" \
+              --api-key "${{ secrets.NUGET_API_KEY }}" \
+              --source https://api.nuget.org/v3/index.json \
+              --skip-duplicate
+          else
+            echo "No packages packed; nothing to push."
+          fi

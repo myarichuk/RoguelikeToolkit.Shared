@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/RoguelikeToolkit.EventAggregator/RoguelikeToolkit.EventAggregator.csproj" />
+    <Project Path="src/RoguelikeToolkit.StateMachine/RoguelikeToolkit.StateMachine.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/RoguelikeToolkit.EventAggregator.Tests/RoguelikeToolkit.EventAggregator.Tests.csproj" />
+    <Project Path="tests/RoguelikeToolkit.StateMachine.Tests/RoguelikeToolkit.StateMachine.Tests.csproj" />
+  </Folder>
+</Solution>

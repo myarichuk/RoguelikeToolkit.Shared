@@ -1,0 +1,42 @@
+# .NET / MSBuild
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Ll]og/
+TestResults/
+*.user
+*.suo
+.vs/
+*.nupkg
+*.snupkg
+!**/packages/**
+
+# Build results
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+
+# NuGet
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE
+.idea/
+*.swp
+*~
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json

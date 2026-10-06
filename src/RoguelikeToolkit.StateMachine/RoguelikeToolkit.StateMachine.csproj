@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <!-- Capped at Unity's documented language support so the shipped DLL avoids
+         runtime-dependent features (e.g. static abstract members, required members). -->
+    <LangVersion>9.0</LangVersion>
+    <!-- Global usings need C# 10; src files use explicit usings instead. -->
+    <ImplicitUsings>disable</ImplicitUsings>
+    <PackageId>RoguelikeToolkit.StateMachine</PackageId>
+    <Description>Minimal finite state machine (configure permitted transitions, guard with CanFire, transition with Fire) for .NET.</Description>
+    <PackageTags>statemachine;fsm;state-machine;roguelike;unity;netstandard</PackageTags>
+  </PropertyGroup>
+
+</Project>

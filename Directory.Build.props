@@ -1,0 +1,29 @@
+<Project>
+  <!-- Shared MSBuild settings for all RoguelikeToolkit projects. -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+
+    <!-- OSS package metadata (Apache-2.0). Update RepositoryUrl/PackageProjectUrl for your fork. -->
+    <Authors>RoguelikeToolkit Contributors</Authors>
+    <Company>RoguelikeToolkit</Company>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/RoguelikeToolkit/RoguelikeToolkit.Shared</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/RoguelikeToolkit/RoguelikeToolkit.Shared.git</RepositoryUrl>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Semantic versioning from git tags (e.g. v1.2.3). See README.md. -->
+    <PackageReference Include="MinVer" Version="6.0.0" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.112" PrivateAssets="All" />
+  </ItemGroup>
+</Project>
