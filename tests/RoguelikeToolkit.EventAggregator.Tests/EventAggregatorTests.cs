@@ -106,6 +106,33 @@ public sealed class EventAggregatorTests
         Assert.Null(exception);
         Assert.Equal(1, count);
     }
+
+    [Fact]
+    public void Subscribe_NullHandler_ThrowsArgumentNullException()
+    {
+        var aggregator = new EventAggregator();
+
+        var ex = Assert.Throws<ArgumentNullException>(() => aggregator.Subscribe<TestEvent>(null!));
+
+        Assert.Equal("handler", ex.ParamName);
+    }
+
+    [Fact]
+    public void Dispose_OneOfMultipleSubscriptions_LeavesOthersSubscribed()
+    {
+        var aggregator = new EventAggregator();
+        var firstCount = 0;
+        var secondCount = 0;
+        using var _ = aggregator.Subscribe<TestEvent>(_ => firstCount++);
+        var second = aggregator.Subscribe<TestEvent>(_ => secondCount++);
+
+        aggregator.Publish(new TestEvent("one"));
+        second.Dispose();
+        aggregator.Publish(new TestEvent("two"));
+
+        Assert.Equal(2, firstCount);
+        Assert.Equal(1, secondCount);
+    }
 }
 
 public sealed class SubscriberManagerTests
@@ -187,6 +214,67 @@ public sealed class SubscriberManagerTests
         Assert.False(manager.Unsubscribe<TestEvent>(Handler));
         Assert.Equal(1, manager.SubscriberCount<TestEvent>());
     }
+
+    [Fact]
+    public void Unsubscribe_NoChannel_ReturnsFalse()
+    {
+        var manager = new SubscriberManager();
+        void Handler(TestEvent _) { }
+
+        Assert.False(manager.Unsubscribe<TestEvent>(Handler));
+    }
+
+    [Fact]
+    public void Unsubscribe_Twice_SecondReturnsFalse()
+    {
+        var manager = new SubscriberManager();
+        void Handler(TestEvent _) { }
+        manager.Subscribe<TestEvent>(Handler);
+
+        Assert.True(manager.Unsubscribe<TestEvent>(Handler));
+        Assert.False(manager.Unsubscribe<TestEvent>(Handler));
+        Assert.Equal(0, manager.SubscriberCount<TestEvent>());
+    }
+
+    [Fact]
+    public void Unsubscribe_DoesNotAffectOtherEventType()
+    {
+        var manager = new SubscriberManager();
+        var testCount = 0;
+        var otherCount = 0;
+        void TestHandler(TestEvent _) => testCount++;
+        using var _ = manager.Subscribe<TestEvent>(TestHandler);
+        using var _2 = manager.Subscribe<OtherEvent>(_ => otherCount++);
+
+        Assert.True(manager.Unsubscribe<TestEvent>(TestHandler));
+        manager.Publish(new TestEvent("hello"));
+        manager.Publish(new OtherEvent(1));
+
+        Assert.Equal(0, testCount);
+        Assert.Equal(1, otherCount);
+        Assert.Equal(0, manager.SubscriberCount<TestEvent>());
+        Assert.Equal(1, manager.SubscriberCount<OtherEvent>());
+    }
+
+    [Fact]
+    public void Subscribe_NullHandler_ThrowsArgumentNullException()
+    {
+        var manager = new SubscriberManager();
+
+        var ex = Assert.Throws<ArgumentNullException>(() => manager.Subscribe<TestEvent>(null!));
+
+        Assert.Equal("handler", ex.ParamName);
+    }
+
+    [Fact]
+    public void Unsubscribe_NullHandler_ThrowsArgumentNullException()
+    {
+        var manager = new SubscriberManager();
+
+        var ex = Assert.Throws<ArgumentNullException>(() => manager.Unsubscribe<TestEvent>(null!));
+
+        Assert.Equal("handler", ex.ParamName);
+    }
 }
 
 public sealed class EventChannelTests
@@ -221,5 +309,113 @@ public sealed class EventChannelTests
 
         Assert.Single(ex.InnerExceptions);
         Assert.Same(failure, ex.InnerExceptions[0]);
+    }
+
+    [Fact]
+    public void Subscribe_NullHandler_ThrowsArgumentNullException()
+    {
+        var channel = new EventChannel<TestEvent>();
+
+        var ex = Assert.Throws<ArgumentNullException>(() => channel.Subscribe(null!));
+
+        Assert.Equal("handler", ex.ParamName);
+    }
+
+    [Fact]
+    public void Unsubscribe_NullHandler_ThrowsArgumentNullException()
+    {
+        var channel = new EventChannel<TestEvent>();
+
+        var ex = Assert.Throws<ArgumentNullException>(() => channel.Unsubscribe(null!));
+
+        Assert.Equal("handler", ex.ParamName);
+    }
+
+    [Fact]
+    public void Unsubscribe_RemovesHandler_StopsDelivery()
+    {
+        var channel = new EventChannel<TestEvent>();
+        var count = 0;
+        void Handler(TestEvent _) => count++;
+        channel.Subscribe(Handler);
+
+        Assert.True(channel.Unsubscribe(Handler));
+        Assert.Equal(0, channel.SubscriberCount);
+        channel.Publish(new TestEvent("hello"));
+
+        Assert.Equal(0, count);
+    }
+
+    [Fact]
+    public void Unsubscribe_UnknownHandler_ReturnsFalse()
+    {
+        var channel = new EventChannel<TestEvent>();
+        void Handler(TestEvent _) { }
+        channel.Subscribe(_ => { });
+
+        Assert.False(channel.Unsubscribe(Handler));
+        Assert.Equal(1, channel.SubscriberCount);
+    }
+
+    [Fact]
+    public void Unsubscribe_Twice_SecondReturnsFalse()
+    {
+        var channel = new EventChannel<TestEvent>();
+        void Handler(TestEvent _) { }
+        channel.Subscribe(Handler);
+
+        Assert.True(channel.Unsubscribe(Handler));
+        Assert.False(channel.Unsubscribe(Handler));
+    }
+
+    [Fact]
+    public void Unsubscribe_OneOfMultiple_LeavesOthersSubscribed()
+    {
+        var channel = new EventChannel<TestEvent>();
+        var firstCount = 0;
+        var secondCount = 0;
+        void First(TestEvent _) => firstCount++;
+        void Second(TestEvent _) => secondCount++;
+        channel.Subscribe(First);
+        channel.Subscribe(Second);
+
+        Assert.True(channel.Unsubscribe(First));
+        Assert.Equal(1, channel.SubscriberCount);
+        channel.Publish(new TestEvent("hello"));
+
+        Assert.Equal(0, firstCount);
+        Assert.Equal(1, secondCount);
+    }
+
+    [Fact]
+    public void Dispose_UnsubscribesHandler()
+    {
+        var channel = new EventChannel<TestEvent>();
+        var count = 0;
+        var subscription = channel.Subscribe(_ => count++);
+
+        channel.Publish(new TestEvent("one"));
+        subscription.Dispose();
+        channel.Publish(new TestEvent("two"));
+
+        Assert.Equal(1, count);
+        Assert.Equal(0, channel.SubscriberCount);
+    }
+
+    [Fact]
+    public void Dispose_CalledTwice_SecondDisposeIsNoOp()
+    {
+        var channel = new EventChannel<TestEvent>();
+        var count = 0;
+        var subscription = channel.Subscribe(_ => count++);
+
+        subscription.Dispose();
+
+        var exception = Record.Exception(() => subscription.Dispose());
+        channel.Publish(new TestEvent("hello"));
+
+        Assert.Null(exception);
+        Assert.Equal(0, count);
+        Assert.Equal(0, channel.SubscriberCount);
     }
 }

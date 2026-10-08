@@ -1,5 +1,8 @@
 # RoguelikeToolkit.Shared
 
+[![CI](https://github.com/myarichuk/RoguelikeToolkit.Shared/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/myarichuk/RoguelikeToolkit.Shared/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/myarichuk/RoguelikeToolkit.Shared/branch/master/graph/badge.svg)](https://codecov.io/gh/myarichuk/RoguelikeToolkit.Shared)
+
 Apache-2.0 licensed open-source building blocks for roguelike (and other) .NET games.
 
 | Package | Target | Description |
