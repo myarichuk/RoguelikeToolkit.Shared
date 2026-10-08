@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "packages": {
+    "src/RoguelikeToolkit.EventAggregator": {
+      "release-type": "node",
+      "component": "event-aggregator"
+    },
+    "src/RoguelikeToolkit.StateMachine": {
+      "release-type": "node",
+      "component": "state-machine"
+    }
+  }
+}
