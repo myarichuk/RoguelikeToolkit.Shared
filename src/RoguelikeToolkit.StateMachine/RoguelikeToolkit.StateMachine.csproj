@@ -8,6 +8,8 @@
     <!-- Global usings need C# 10; src files use explicit usings instead. -->
     <ImplicitUsings>disable</ImplicitUsings>
     <PackageId>RoguelikeToolkit.StateMachine</PackageId>
+    <!-- Independent per-package versions: release-please tags look like state-machine-v1.2.3. -->
+    <MinVerTagPrefix>state-machine-v</MinVerTagPrefix>
     <Description>Minimal finite state machine (configure permitted transitions, guard with CanFire, transition with Fire) for .NET.</Description>
     <PackageTags>statemachine;fsm;state-machine;roguelike;unity;netstandard</PackageTags>
   </PropertyGroup>

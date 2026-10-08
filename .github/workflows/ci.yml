@@ -9,6 +9,10 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      # Mirrored here (rather than read via secrets.* in `if:`, which GitHub
+      # rejects) so steps can gate on its presence. Empty on fork PRs.
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -52,7 +56,7 @@ jobs:
 
       - name: Upload coverage to Codecov (EventAggregator)
         # Secrets are empty on PRs from forks, so skip instead of failing.
-        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        if: env.CODECOV_TOKEN != ''
         uses: codecov/codecov-action@v5
         with:
           files: coveragereport/event-aggregator/Cobertura.xml
@@ -62,7 +66,7 @@ jobs:
 
       - name: Upload coverage to Codecov (StateMachine)
         # Secrets are empty on PRs from forks, so skip instead of failing.
-        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        if: env.CODECOV_TOKEN != ''
         uses: codecov/codecov-action@v5
         with:
           files: coveragereport/state-machine/Cobertura.xml

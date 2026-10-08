@@ -8,6 +8,8 @@
     <!-- Global usings need C# 10; src files use explicit usings instead. -->
     <ImplicitUsings>disable</ImplicitUsings>
     <PackageId>RoguelikeToolkit.EventAggregator</PackageId>
+    <!-- Independent per-package versions: release-please tags look like event-aggregator-v1.2.3. -->
+    <MinVerTagPrefix>event-aggregator-v</MinVerTagPrefix>
     <Description>Lightweight synchronous in-process event aggregator (publish/subscribe messaging) for .NET.</Description>
     <PackageTags>events;event-aggregator;messaging;pubsub;roguelike;unity;netstandard</PackageTags>
   </PropertyGroup>

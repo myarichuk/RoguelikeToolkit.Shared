@@ -1,0 +1,6 @@
+# .NET build outputs and project files — UPM ships sources, NuGet ships the compiled DLLs.
+bin/
+obj/
+*.csproj
+*.user
+.vs/
