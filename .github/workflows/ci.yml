@@ -27,5 +27,75 @@ jobs:
       - name: Build
         run: dotnet build --no-restore -c Release
 
-      - name: Test
-        run: dotnet test --no-build -c Release
+      - name: Test with coverage (EventAggregator)
+        run: dotnet test tests/RoguelikeToolkit.EventAggregator.Tests/RoguelikeToolkit.EventAggregator.Tests.csproj --no-build -c Release -s coverlet.runsettings --collect:"XPlat Code Coverage" --results-directory ./TestResults/event-aggregator
+
+      - name: Test with coverage (StateMachine)
+        run: dotnet test tests/RoguelikeToolkit.StateMachine.Tests/RoguelikeToolkit.StateMachine.Tests.csproj --no-build -c Release -s coverlet.runsettings --collect:"XPlat Code Coverage" --results-directory ./TestResults/state-machine
+
+      - name: Restore .NET tools
+        run: dotnet tool restore
+
+      - name: Generate coverage reports
+        run: |
+          dotnet reportgenerator -reports:"TestResults/event-aggregator/**/coverage.cobertura.xml" -targetdir:"coveragereport/event-aggregator" -reporttypes:"MarkdownSummaryGithub;Cobertura;Html"
+          dotnet reportgenerator -reports:"TestResults/state-machine/**/coverage.cobertura.xml" -targetdir:"coveragereport/state-machine" -reporttypes:"MarkdownSummaryGithub;Cobertura;Html"
+
+      - name: Publish coverage summaries
+        run: |
+          {
+            echo "## EventAggregator"
+            cat coveragereport/event-aggregator/SummaryGithub.md
+            echo "## StateMachine"
+            cat coveragereport/state-machine/SummaryGithub.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage to Codecov (EventAggregator)
+        # Secrets are empty on PRs from forks, so skip instead of failing.
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@v5
+        with:
+          files: coveragereport/event-aggregator/Cobertura.xml
+          flags: event-aggregator
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+
+      - name: Upload coverage to Codecov (StateMachine)
+        # Secrets are empty on PRs from forks, so skip instead of failing.
+        if: ${{ secrets.CODECOV_TOKEN != '' }}
+        uses: codecov/codecov-action@v5
+        with:
+          files: coveragereport/state-machine/Cobertura.xml
+          flags: state-machine
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+
+      - name: Enforce coverage thresholds (90% lines, per project)
+        run: |
+          python3 - <<'EOF'
+          import sys, xml.etree.ElementTree as ET
+          ok = True
+          for project in ("event-aggregator", "state-machine"):
+              rate = float(ET.parse(f"coveragereport/{project}/Cobertura.xml").getroot().attrib["line-rate"])
+              print(f"{project}: line coverage {rate:.1%} (threshold 90%)")
+              if rate < 0.90:
+                  print(f"::error::{project} line coverage below the 90% threshold")
+                  ok = False
+          sys.exit(0 if ok else 1)
+          EOF
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coveragereport/
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Validate UPM packages
+        run: |
+          npm pack --dry-run --pack-destination /tmp ./src/RoguelikeToolkit.EventAggregator
+          npm pack --dry-run --pack-destination /tmp ./src/RoguelikeToolkit.StateMachine

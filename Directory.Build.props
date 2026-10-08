@@ -13,9 +13,9 @@
     <Authors>RoguelikeToolkit Contributors</Authors>
     <Company>RoguelikeToolkit</Company>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/RoguelikeToolkit/RoguelikeToolkit.Shared</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/myarichuk/RoguelikeToolkit.Shared</PackageProjectUrl>
     <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/RoguelikeToolkit/RoguelikeToolkit.Shared.git</RepositoryUrl>
+    <RepositoryUrl>https://github.com/myarichuk/RoguelikeToolkit.Shared.git</RepositoryUrl>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>

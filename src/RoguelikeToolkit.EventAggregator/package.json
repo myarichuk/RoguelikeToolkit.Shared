@@ -1,0 +1,20 @@
+{
+  "name": "com.rogueliketoolkit.event-aggregator",
+  "displayName": "RoguelikeToolkit EventAggregator",
+  "version": "0.1.0",
+  "unity": "2021.2",
+  "description": "Lightweight synchronous in-process event aggregator (publish/subscribe messaging).",
+  "license": "Apache-2.0",
+  "author": {
+    "name": "RoguelikeToolkit Contributors"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/myarichuk/RoguelikeToolkit.Shared.git"
+  },
+  "keywords": [
+    "events",
+    "messaging",
+    "roguelike"
+  ]
+}

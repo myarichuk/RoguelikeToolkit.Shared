@@ -1,0 +1,20 @@
+{
+  "name": "com.rogueliketoolkit.state-machine",
+  "displayName": "RoguelikeToolkit StateMachine",
+  "version": "0.1.0",
+  "unity": "2021.2",
+  "description": "Minimal finite state machine (configure permitted transitions, guard with CanFire, transition with Fire).",
+  "license": "Apache-2.0",
+  "author": {
+    "name": "RoguelikeToolkit Contributors"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/myarichuk/RoguelikeToolkit.Shared.git"
+  },
+  "keywords": [
+    "state-machine",
+    "fsm",
+    "roguelike"
+  ]
+}

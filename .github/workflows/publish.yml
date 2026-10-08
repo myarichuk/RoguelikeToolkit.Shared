@@ -1,64 +1,70 @@
 name: Publish
 
-# Publishes semantic-versioned NuGet packages, but only for the projects
-# whose sources actually changed. Versions come from git tags via MinVer
-# (tag releases as v1.2.3); `--skip-duplicate` makes republishing idempotent,
-# so a package version that already exists on NuGet is skipped.
+# Tag-driven releases. Tags are created by release-please from conventional
+# commits (e.g. event-aggregator-v1.2.3), so a package is only published when
+# it actually changed. Each run publishes one package to both distributions:
+#  - NuGet (.nupkg, versioned by MinVer from the tag via MinVerTagPrefix)
+#  - UPM (tarball attached to the GitHub Release, picked up by OpenUPM)
 #
-# Setup: add a nuget.org API key as the NUGET_API_KEY repository secret.
+# Setup: register this repo + workflow as a trusted publisher on nuget.org
+# (account menu -> Trusted Publishing). No API key secret needed.
 
 on:
   push:
-    branches: [main]
-    tags: ['v[0-9]*.[0-9]*.[0-9]*']
+    tags: ['*-v*']
 
 permissions:
-  contents: read
+  contents: write
+  id-token: write # Required for NuGet trusted publishing (OIDC).
 
 jobs:
-  detect-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      eventaggregator: ${{ steps.filter.outputs.eventaggregator }}
-      statemachine: ${{ steps.filter.outputs.statemachine }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Detect changed packages
-        id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            eventaggregator:
-              - 'src/RoguelikeToolkit.EventAggregator/**'
-              - 'Directory.Build.props'
-              - 'global.json'
-            statemachine:
-              - 'src/RoguelikeToolkit.StateMachine/**'
-              - 'Directory.Build.props'
-              - 'global.json'
-
   publish:
-    needs: detect-changes
-    # Tag builds (v*) publish both packages; branch pushes publish only what changed.
-    if: >-
-      startsWith(github.ref, 'refs/tags/v') ||
-      needs.detect-changes.outputs.eventaggregator == 'true' ||
-      needs.detect-changes.outputs.statemachine == 'true'
+    # External publishing (NuGet push + OpenUPM notify) runs only when the
+    # PUBLISH_ENABLED repo variable is 'true' (Settings -> Secrets and
+    # variables -> Actions -> Variables tab). Absent or any other value means
+    # skip. Everything else (build, test, pack, UPM tarball attach) still runs
+    # so tag pushes validate the release pipeline. The repository check stays
+    # so fork tag pushes never publish.
+    if: github.repository == 'myarichuk/RoguelikeToolkit.Shared'
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve package from tag
+        id: target
+        run: |
+          case "${GITHUB_REF_NAME}" in
+            event-aggregator-v*)
+              echo "title=EventAggregator" >> "$GITHUB_OUTPUT"
+              echo "csproj=src/RoguelikeToolkit.EventAggregator/RoguelikeToolkit.EventAggregator.csproj" >> "$GITHUB_OUTPUT"
+              echo "upm_dir=src/RoguelikeToolkit.EventAggregator" >> "$GITHUB_OUTPUT"
+              echo "openupm_package=com.rogueliketoolkit.event-aggregator" >> "$GITHUB_OUTPUT"
+              ;;
+            state-machine-v*)
+              echo "title=StateMachine" >> "$GITHUB_OUTPUT"
+              echo "csproj=src/RoguelikeToolkit.StateMachine/RoguelikeToolkit.StateMachine.csproj" >> "$GITHUB_OUTPUT"
+              echo "upm_dir=src/RoguelikeToolkit.StateMachine" >> "$GITHUB_OUTPUT"
+              echo "openupm_package=com.rogueliketoolkit.state-machine" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "::error::Unknown tag prefix: ${GITHUB_REF_NAME}"
+              exit 1
+              ;;
+          esac
+
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          # Full history + tags so MinVer can compute the version.
           fetch-depth: 0
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
       - name: Restore
         run: dotnet restore
@@ -69,21 +75,37 @@ jobs:
       - name: Test
         run: dotnet test --no-build -c Release
 
-      - name: Pack EventAggregator
-        if: startsWith(github.ref, 'refs/tags/v') || needs.detect-changes.outputs.eventaggregator == 'true'
-        run: dotnet pack src/RoguelikeToolkit.EventAggregator/RoguelikeToolkit.EventAggregator.csproj --no-build -c Release -o ./nupkgs
+      - name: Pack NuGet
+        run: dotnet pack "${{ steps.target.outputs.csproj }}" --no-build -c Release -o ./nupkgs
 
-      - name: Pack StateMachine
-        if: startsWith(github.ref, 'refs/tags/v') || needs.detect-changes.outputs.statemachine == 'true'
-        run: dotnet pack src/RoguelikeToolkit.StateMachine/RoguelikeToolkit.StateMachine.csproj --no-build -c Release -o ./nupkgs
+      - name: Login to NuGet (trusted publishing)
+        id: nuget-login
+        if: vars.PUBLISH_ENABLED == 'true'
+        uses: NuGet/login@v1
 
       - name: Push to NuGet
+        if: vars.PUBLISH_ENABLED == 'true'
+        run: >
+          dotnet nuget push "./nupkgs/*.nupkg"
+          --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}"
+          --source https://api.nuget.org/v3/index.json
+          --skip-duplicate
+
+      - name: Pack UPM tarball
         run: |
-          if compgen -G "./nupkgs/*.nupkg" > /dev/null; then
-            dotnet nuget push "./nupkgs/*.nupkg" \
-              --api-key "${{ secrets.NUGET_API_KEY }}" \
-              --source https://api.nuget.org/v3/index.json \
-              --skip-duplicate
-          else
-            echo "No packages packed; nothing to push."
-          fi
+          mkdir -p ./upm-dist
+          npm pack --pack-destination ./upm-dist
+        working-directory: ${{ steps.target.outputs.upm_dir }}
+
+      - name: Attach UPM tarball to release
+        run: gh release upload "${GITHUB_REF_NAME}" ./upm-dist/*.tgz --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Notify OpenUPM
+        if: vars.PUBLISH_ENABLED == 'true'
+        uses: openupm/openupm-action@v1
+        continue-on-error: true # No-op until the one-time OpenUPM registration is done (see README.md).
+        with:
+          package: ${{ steps.target.outputs.openupm_package }}
+          tag: ${{ github.ref_name }}
