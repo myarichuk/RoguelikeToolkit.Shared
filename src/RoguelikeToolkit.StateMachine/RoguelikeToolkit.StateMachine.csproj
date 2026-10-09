@@ -10,7 +10,7 @@
     <PackageId>RoguelikeToolkit.StateMachine</PackageId>
     <!-- Independent per-package versions: release-please tags look like state-machine-v1.2.3. -->
     <MinVerTagPrefix>state-machine-v</MinVerTagPrefix>
-    <Description>Minimal finite state machine (configure permitted transitions, guard with CanFire, transition with Fire) for .NET.</Description>
+    <Description>Finite state machine with shared context, guards, entry/exit actions, and transition sink for .NET.</Description>
     <PackageTags>statemachine;fsm;state-machine;roguelike;unity;netstandard</PackageTags>
   </PropertyGroup>
 

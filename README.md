@@ -8,7 +8,7 @@ Apache-2.0 licensed open-source building blocks for roguelike (and other) .NET g
 | Package | Target | Description |
 |---|---|---|
 | `RoguelikeToolkit.EventAggregator` | `netstandard2.1` | Synchronous in-process publish/subscribe messaging. |
-| `RoguelikeToolkit.StateMachine` | `netstandard2.1` | Minimal finite state machine (`Configure` / `CanFire` / `Fire`). |
+| `RoguelikeToolkit.StateMachine` | `netstandard2.1` | Finite state machine with shared context, guards, entry/exit actions, and transition sink. |
 
 Test projects (`*.Tests`, xUnit v3) live under [`tests/`](tests/) and target `net10.0`.
 

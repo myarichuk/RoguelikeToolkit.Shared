@@ -3,7 +3,7 @@
   "displayName": "RoguelikeToolkit StateMachine",
   "version": "0.1.0",
   "unity": "2021.2",
-  "description": "Minimal finite state machine (configure permitted transitions, guard with CanFire, transition with Fire).",
+  "description": "Finite state machine with shared context, guards, entry/exit actions, and transition sink.",
   "license": "Apache-2.0",
   "author": {
     "name": "RoguelikeToolkit Contributors"
