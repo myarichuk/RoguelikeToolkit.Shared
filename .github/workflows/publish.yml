@@ -82,6 +82,9 @@ jobs:
         id: nuget-login
         if: vars.PUBLISH_ENABLED == 'true'
         uses: NuGet/login@v1
+        with:
+          # Required input: the nuget.org username the trusted publisher is registered under.
+          user: michael.yarichuk
 
       - name: Push to NuGet
         if: vars.PUBLISH_ENABLED == 'true'
