@@ -18,5 +18,17 @@ namespace RoguelikeToolkit.EventAggregator
         {
             _manager.Publish(@event);
         }
+
+        /// <inheritdoc />
+        public bool Unsubscribe<TEvent>(Action<TEvent> handler)
+        {
+            return _manager.Unsubscribe(handler);
+        }
+
+        /// <inheritdoc />
+        public int SubscriberCount<TEvent>()
+        {
+            return _manager.SubscriberCount<TEvent>();
+        }
     }
 }

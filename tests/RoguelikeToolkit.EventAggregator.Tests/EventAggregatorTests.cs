@@ -133,6 +133,59 @@ public sealed class EventAggregatorTests
         Assert.Equal(2, firstCount);
         Assert.Equal(1, secondCount);
     }
+
+    [Fact]
+    public void Unsubscribe_RemovesHandler_StopsDelivery()
+    {
+        var aggregator = new EventAggregator();
+        var count = 0;
+        void Handler(TestEvent _) => count++;
+        aggregator.Subscribe<TestEvent>(Handler);
+
+        Assert.True(aggregator.Unsubscribe<TestEvent>(Handler));
+        Assert.Equal(0, aggregator.SubscriberCount<TestEvent>());
+        aggregator.Publish(new TestEvent("hello"));
+
+        Assert.Equal(0, count);
+    }
+
+    [Fact]
+    public void Unsubscribe_UnknownHandler_ReturnsFalse()
+    {
+        var aggregator = new EventAggregator();
+        void Handler(TestEvent _) { }
+        using var _ = aggregator.Subscribe<TestEvent>(_ => { });
+
+        Assert.False(aggregator.Unsubscribe<TestEvent>(Handler));
+        Assert.Equal(1, aggregator.SubscriberCount<TestEvent>());
+    }
+
+    [Fact]
+    public void Unsubscribe_NullHandler_ThrowsArgumentNullException()
+    {
+        var aggregator = new EventAggregator();
+
+        var ex = Assert.Throws<ArgumentNullException>(() => aggregator.Unsubscribe<TestEvent>(null!));
+
+        Assert.Equal("handler", ex.ParamName);
+    }
+
+    [Fact]
+    public void SubscriberCount_TracksSubscriptions()
+    {
+        var aggregator = new EventAggregator();
+
+        Assert.Equal(0, aggregator.SubscriberCount<TestEvent>());
+
+        using var first = aggregator.Subscribe<TestEvent>(_ => { });
+        Assert.Equal(1, aggregator.SubscriberCount<TestEvent>());
+
+        using var second = aggregator.Subscribe<TestEvent>(_ => { });
+        Assert.Equal(2, aggregator.SubscriberCount<TestEvent>());
+
+        first.Dispose();
+        Assert.Equal(1, aggregator.SubscriberCount<TestEvent>());
+    }
 }
 
 public sealed class SubscriberManagerTests

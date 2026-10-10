@@ -11,6 +11,17 @@ namespace RoguelikeToolkit.EventAggregator
         /// <returns>An <see cref="IDisposable"/> that unsubscribes the handler when disposed.</returns>
         IDisposable Subscribe<TEvent>(Action<TEvent> handler);
 
+        /// <summary>Removes a previously subscribed handler.</summary>
+        /// <typeparam name="TEvent">The event type.</typeparam>
+        /// <param name="handler">The handler to remove.</param>
+        /// <returns><c>true</c> if the handler was subscribed; otherwise <c>false</c>.</returns>
+        bool Unsubscribe<TEvent>(Action<TEvent> handler);
+
+        /// <summary>Gets the number of handlers subscribed for <typeparamref name="TEvent"/>.</summary>
+        /// <typeparam name="TEvent">The event type.</typeparam>
+        /// <returns>The subscriber count, or 0 when nothing subscribed yet.</returns>
+        int SubscriberCount<TEvent>();
+
         /// <summary>Publishes an event to all subscribed handlers.</summary>
         /// <typeparam name="TEvent">The event type.</typeparam>
         /// <param name="event">The event instance.</param>
