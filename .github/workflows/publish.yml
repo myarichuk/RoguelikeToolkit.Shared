@@ -95,9 +95,11 @@ jobs:
           --skip-duplicate
 
       - name: Pack UPM tarball
+        # --pack-destination resolves against working-directory, so it must be
+        # absolute to land where the attach step (repo root) expects it.
         run: |
-          mkdir -p ./upm-dist
-          npm pack --pack-destination ./upm-dist
+          mkdir -p "$GITHUB_WORKSPACE/upm-dist"
+          npm pack --pack-destination "$GITHUB_WORKSPACE/upm-dist"
         working-directory: ${{ steps.target.outputs.upm_dir }}
 
       - name: Attach UPM tarball to release
