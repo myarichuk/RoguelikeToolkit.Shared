@@ -1,4 +1,4 @@
 {
-  "src/RoguelikeToolkit.EventAggregator": "0.2.0",
-  "src/RoguelikeToolkit.StateMachine": "0.3.0"
+  "src/RoguelikeToolkit.EventAggregator": "0.3.0",
+  "src/RoguelikeToolkit.StateMachine": "0.4.0"
 }
