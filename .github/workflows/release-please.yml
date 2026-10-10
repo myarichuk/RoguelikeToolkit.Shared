@@ -17,5 +17,9 @@ jobs:
     steps:
       - uses: googleapis/release-please-action@v4
         with:
+          # PAT (stored as a secret) so the tags + releases it creates trigger
+          # the tag-driven Publish workflow. The default GITHUB_TOKEN's pushes
+          # do not trigger downstream workflows, which silently disables publishing.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
