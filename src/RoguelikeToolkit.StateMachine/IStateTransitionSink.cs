@@ -1,3 +1,5 @@
+#nullable enable
+
 namespace RoguelikeToolkit.StateMachine
 {
     /// <summary>Receives exactly one callback per committed transition.</summary>
@@ -9,7 +11,11 @@ namespace RoguelikeToolkit.StateMachine
         where TTrigger : notnull
         where TContext : class
     {
-        /// <summary>Invoked once after the machine commits to <paramref name="transition"/>.</summary>
+        /// <summary>
+        /// Invoked once after the machine commits to <paramref name="transition"/>, including a transition
+        /// whose entry action threw (see <see cref="StateTransition{TState, TTrigger}.Error"/>), so a
+        /// sink-driven observer never disagrees with <c>machine.State</c>.
+        /// </summary>
         /// <param name="transition">The committed transition.</param>
         /// <param name="context">The shared context. Snapshot what is needed synchronously; it remains mutable.</param>
         void OnTransition(StateTransition<TState, TTrigger> transition, TContext context);

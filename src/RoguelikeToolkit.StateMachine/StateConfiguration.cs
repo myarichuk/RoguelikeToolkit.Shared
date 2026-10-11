@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 
 namespace RoguelikeToolkit.StateMachine
@@ -20,11 +22,16 @@ namespace RoguelikeToolkit.StateMachine
             _state = state;
         }
 
-        /// <summary>Permits <paramref name="trigger"/> to move the machine from this state to <paramref name="destination"/>.</summary>
+        /// <summary>
+        /// Permits <paramref name="trigger"/> to move the machine from this state to <paramref name="destination"/>.
+        /// Calling it again for the same trigger adds another branch: branches are tried in the order added and the
+        /// first whose guard passes wins, so end with an unguarded branch for "otherwise".
+        /// </summary>
         /// <param name="trigger">The trigger.</param>
         /// <param name="destination">The destination state.</param>
         /// <param name="guard">Optional guard evaluated against the shared context. Null means unconditionally permitted.</param>
         /// <returns>This configuration, for chaining.</returns>
+        /// <exception cref="InvalidOperationException">The trigger is ignored in this state, or an unguarded branch already exists (a later branch could never run).</exception>
         public StateConfiguration<TState, TTrigger, TContext> Permit(TTrigger trigger, TState destination, Func<TContext, bool>? guard = null)
         {
             _machine.Permit(_state, trigger, destination, guard);

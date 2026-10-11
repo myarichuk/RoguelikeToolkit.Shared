@@ -1,0 +1,30 @@
+#nullable enable
+RoguelikeToolkit.Determinism.DeterministicRandom
+RoguelikeToolkit.Determinism.DeterministicRandom.Chance(double probability) -> bool
+RoguelikeToolkit.Determinism.DeterministicRandom.Derive(string! salt) -> RoguelikeToolkit.Determinism.DeterministicRandom!
+RoguelikeToolkit.Determinism.DeterministicRandom.DeterministicRandom(ulong seed) -> void
+RoguelikeToolkit.Determinism.DeterministicRandom.NextBool() -> bool
+RoguelikeToolkit.Determinism.DeterministicRandom.NextDouble() -> double
+RoguelikeToolkit.Determinism.DeterministicRandom.NextInt(int maxExclusive) -> int
+RoguelikeToolkit.Determinism.DeterministicRandom.NextInt(int minInclusive, int maxExclusive) -> int
+RoguelikeToolkit.Determinism.DeterministicRandom.NextUInt32() -> uint
+RoguelikeToolkit.Determinism.DeterministicRandom.NextUInt64() -> ulong
+RoguelikeToolkit.Determinism.DeterministicRandom.Restore(ulong state) -> void
+RoguelikeToolkit.Determinism.DeterministicRandom.Seed.get -> ulong
+RoguelikeToolkit.Determinism.DeterministicRandom.Shuffle<T>(System.Collections.Generic.IList<T>! list) -> void
+RoguelikeToolkit.Determinism.DeterministicRandom.State.get -> ulong
+RoguelikeToolkit.Determinism.DeterministicRandom.WeightedIndex(System.Collections.Generic.IReadOnlyList<double>! weights) -> int
+RoguelikeToolkit.Determinism.SequencedQueue<T>
+RoguelikeToolkit.Determinism.SequencedQueue<T>.Capture() -> RoguelikeToolkit.Determinism.SequencedQueueSnapshot<T>
+RoguelikeToolkit.Determinism.SequencedQueue<T>.Count.get -> int
+RoguelikeToolkit.Determinism.SequencedQueue<T>.Drain(System.Action<T>! handler, int maxItems = 10000, System.Action<T, System.Exception!>? onError = null) -> int
+RoguelikeToolkit.Determinism.SequencedQueue<T>.Enqueue(System.Func<long, T>! create) -> T
+RoguelikeToolkit.Determinism.SequencedQueue<T>.IsDraining.get -> bool
+RoguelikeToolkit.Determinism.SequencedQueue<T>.NextSequence.get -> long
+RoguelikeToolkit.Determinism.SequencedQueue<T>.Restore(RoguelikeToolkit.Determinism.SequencedQueueSnapshot<T> snapshot) -> void
+RoguelikeToolkit.Determinism.SequencedQueue<T>.SequencedQueue(long firstSequence = 1) -> void
+RoguelikeToolkit.Determinism.SequencedQueueSnapshot<T>
+RoguelikeToolkit.Determinism.SequencedQueueSnapshot<T>.NextSequence.get -> long
+RoguelikeToolkit.Determinism.SequencedQueueSnapshot<T>.Pending.get -> System.Collections.Generic.IReadOnlyList<T>!
+RoguelikeToolkit.Determinism.SequencedQueueSnapshot<T>.SequencedQueueSnapshot() -> void
+RoguelikeToolkit.Determinism.SequencedQueueSnapshot<T>.SequencedQueueSnapshot(long nextSequence, System.Collections.Generic.IReadOnlyList<T>! pending) -> void

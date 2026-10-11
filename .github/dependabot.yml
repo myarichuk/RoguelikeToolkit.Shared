@@ -1,0 +1,21 @@
+version: 2
+updates:
+  # Actions are pinned to commit SHAs; Dependabot bumps the SHA and the version comment together.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # NuGet versions live in Directory.Packages.props (central package management).
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      test-tooling:
+        patterns: ["xunit*", "coverlet*", "Microsoft.NET.Test.Sdk"]
+      build-tooling:
+        patterns: ["MinVer", "Microsoft.SourceLink.*", "Microsoft.CodeAnalysis.*"]

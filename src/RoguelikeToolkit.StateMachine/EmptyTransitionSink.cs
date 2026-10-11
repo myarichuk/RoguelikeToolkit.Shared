@@ -1,3 +1,5 @@
+#nullable enable
+
 namespace RoguelikeToolkit.StateMachine
 {
     /// <summary>No-op transition sink. Use <see cref="Instance"/> to avoid allocating a sink per machine.</summary>

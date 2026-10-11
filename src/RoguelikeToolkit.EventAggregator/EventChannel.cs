@@ -1,26 +1,30 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace RoguelikeToolkit.EventAggregator
 {
-    /// <summary>Holds the subscriber list for a single event type.</summary>
-    /// <typeparam name="TEvent">The event type delivered through this channel.</typeparam>
-    public class EventChannel<TEvent>
+    /// <summary>Type-erased view of a channel, so the bus can dispatch by runtime type without reflection.</summary>
+    internal interface IEventChannel
     {
-        private readonly object @lock = new object();
-        private readonly List<Action<TEvent>> _subscribers = new List<Action<TEvent>>();
+        void PublishBoxed(object @event);
+    }
+
+    /// <summary>
+    /// Holds the subscriber list for a single event type. The list is copy-on-write: subscribe and
+    /// unsubscribe swap in a new array under a lock, publish reads the current array lock-free
+    /// and allocates nothing.
+    /// </summary>
+    /// <typeparam name="TEvent">The event type delivered through this channel.</typeparam>
+    internal sealed class EventChannel<TEvent> : IEventChannel
+    {
+        private readonly object _gate = new object();
+        private Action<TEvent>[] _handlers = Array.Empty<Action<TEvent>>();
 
         /// <summary>Gets the number of subscribed handlers.</summary>
-        public int SubscriberCount
-        {
-            get
-            {
-                lock (@lock)
-                {
-                    return _subscribers.Count;
-                }
-            }
-        }
+        public int SubscriberCount => Volatile.Read(ref _handlers).Length;
 
         /// <summary>Subscribes a handler to events delivered through this channel.</summary>
         /// <param name="handler">The handler invoked for each published event.</param>
@@ -32,9 +36,13 @@ namespace RoguelikeToolkit.EventAggregator
                 throw new ArgumentNullException(nameof(handler));
             }
 
-            lock (@lock)
+            lock (_gate)
             {
-                _subscribers.Add(handler);
+                var current = _handlers;
+                var next = new Action<TEvent>[current.Length + 1];
+                Array.Copy(current, next, current.Length);
+                next[current.Length] = handler;
+                Volatile.Write(ref _handlers, next);
             }
 
             return new Subscription(this, handler);
@@ -48,23 +56,14 @@ namespace RoguelikeToolkit.EventAggregator
         /// </exception>
         public void Publish(TEvent @event)
         {
-            List<Action<TEvent>> snapshot;
-            lock (@lock)
-            {
-                if (_subscribers.Count == 0)
-                {
-                    return;
-                }
-
-                snapshot = new List<Action<TEvent>>(_subscribers);
-            }
+            var snapshot = Volatile.Read(ref _handlers);
 
             List<Exception>? failures = null;
-            foreach (var handler in snapshot)
+            for (var i = 0; i < snapshot.Length; i++)
             {
                 try
                 {
-                    handler(@event);
+                    snapshot[i](@event);
                 }
                 catch (Exception ex)
                 {
@@ -79,7 +78,12 @@ namespace RoguelikeToolkit.EventAggregator
             }
         }
 
-        /// <summary>Removes a previously subscribed handler.</summary>
+        void IEventChannel.PublishBoxed(object @event)
+        {
+            Publish((TEvent)@event);
+        }
+
+        /// <summary>Removes the first registration of a handler (by delegate equality).</summary>
         /// <param name="handler">The handler to remove.</param>
         /// <returns><c>true</c> if the handler was subscribed; otherwise <c>false</c>.</returns>
         public bool Unsubscribe(Action<TEvent> handler)
@@ -89,9 +93,20 @@ namespace RoguelikeToolkit.EventAggregator
                 throw new ArgumentNullException(nameof(handler));
             }
 
-            lock (@lock)
+            lock (_gate)
             {
-                return _subscribers.Remove(handler);
+                var current = _handlers;
+                var index = Array.FindIndex(current, h => h.Equals(handler));
+                if (index < 0)
+                {
+                    return false;
+                }
+
+                var next = new Action<TEvent>[current.Length - 1];
+                Array.Copy(current, 0, next, 0, index);
+                Array.Copy(current, index + 1, next, index, current.Length - index - 1);
+                Volatile.Write(ref _handlers, next);
+                return true;
             }
         }
 
@@ -99,7 +114,7 @@ namespace RoguelikeToolkit.EventAggregator
         {
             private readonly EventChannel<TEvent> _owner;
             private readonly Action<TEvent> _handler;
-            private bool _disposed;
+            private int _disposed;
 
             public Subscription(EventChannel<TEvent> owner, Action<TEvent> handler)
             {
@@ -109,9 +124,8 @@ namespace RoguelikeToolkit.EventAggregator
 
             public void Dispose()
             {
-                if (!_disposed)
+                if (Interlocked.Exchange(ref _disposed, 1) == 0)
                 {
-                    _disposed = true;
                     _owner.Unsubscribe(_handler);
                 }
             }

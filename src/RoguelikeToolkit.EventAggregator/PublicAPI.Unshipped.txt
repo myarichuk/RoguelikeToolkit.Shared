@@ -1,0 +1,14 @@
+#nullable enable
+RoguelikeToolkit.EventAggregator.EventAggregator
+RoguelikeToolkit.EventAggregator.EventAggregator.EventAggregator() -> void
+RoguelikeToolkit.EventAggregator.EventAggregator.Publish<TEvent>(TEvent event) -> void
+RoguelikeToolkit.EventAggregator.EventAggregator.PublishByRuntimeType(object! event) -> void
+RoguelikeToolkit.EventAggregator.EventAggregator.Subscribe<TEvent>(System.Action<TEvent>! handler) -> System.IDisposable!
+RoguelikeToolkit.EventAggregator.EventAggregator.SubscriberCount<TEvent>() -> int
+RoguelikeToolkit.EventAggregator.EventAggregator.Unsubscribe<TEvent>(System.Action<TEvent>! handler) -> bool
+RoguelikeToolkit.EventAggregator.IEventAggregator
+RoguelikeToolkit.EventAggregator.IEventAggregator.Publish<TEvent>(TEvent event) -> void
+RoguelikeToolkit.EventAggregator.IEventAggregator.PublishByRuntimeType(object! event) -> void
+RoguelikeToolkit.EventAggregator.IEventAggregator.Subscribe<TEvent>(System.Action<TEvent>! handler) -> System.IDisposable!
+RoguelikeToolkit.EventAggregator.IEventAggregator.SubscriberCount<TEvent>() -> int
+RoguelikeToolkit.EventAggregator.IEventAggregator.Unsubscribe<TEvent>(System.Action<TEvent>! handler) -> bool

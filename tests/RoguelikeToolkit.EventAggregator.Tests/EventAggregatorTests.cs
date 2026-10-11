@@ -1,3 +1,8 @@
+using System;
+using System.Linq;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using RoguelikeToolkit.EventAggregator;
 using Xunit;
 
@@ -470,5 +475,185 @@ public sealed class EventChannelTests
         Assert.Null(exception);
         Assert.Equal(0, count);
         Assert.Equal(0, channel.SubscriberCount);
+    }
+}
+
+public sealed class EventAggregatorBehaviorTests
+{
+    private class BaseEvent
+    {
+    }
+
+    private sealed class DerivedEvent : BaseEvent
+    {
+    }
+
+    private readonly record struct StructEvent(int Value);
+
+    [Fact]
+    public void Publish_UsesStaticType_NotRuntimeType()
+    {
+        var bus = new EventAggregator();
+        var baseCount = 0;
+        var objectCount = 0;
+        using var _1 = bus.Subscribe<BaseEvent>(_ => baseCount++);
+        using var _2 = bus.Subscribe<object>(_ => objectCount++);
+
+        bus.Publish(new DerivedEvent());
+        bus.Publish((object)new BaseEvent());
+
+        Assert.Equal(0, baseCount);
+        Assert.Equal(1, objectCount);
+    }
+
+    [Fact]
+    public void PublishByRuntimeType_DeliversToExactRuntimeTypeOnly()
+    {
+        var bus = new EventAggregator();
+        var derived = 0;
+        var baseCount = 0;
+        using var _1 = bus.Subscribe<DerivedEvent>(_ => derived++);
+        using var _2 = bus.Subscribe<BaseEvent>(_ => baseCount++);
+
+        bus.PublishByRuntimeType(new DerivedEvent());
+
+        Assert.Equal(1, derived);
+        Assert.Equal(0, baseCount);
+    }
+
+    [Fact]
+    public void PublishByRuntimeType_UnboxesStructEvents()
+    {
+        var bus = new EventAggregator();
+        var received = -1;
+        using var _ = bus.Subscribe<StructEvent>(e => received = e.Value);
+
+        bus.PublishByRuntimeType(new StructEvent(7));
+
+        Assert.Equal(7, received);
+    }
+
+    [Fact]
+    public void PublishByRuntimeType_NoSubscribers_IsNoOp_AndNullThrows()
+    {
+        var bus = new EventAggregator();
+
+        bus.PublishByRuntimeType(new DerivedEvent());
+
+        Assert.Throws<ArgumentNullException>(() => bus.PublishByRuntimeType(null!));
+    }
+
+    [Fact]
+    public void Publish_FromWithinHandler_DeliversDepthFirst()
+    {
+        var bus = new EventAggregator();
+        var log = new List<string>();
+        using var _1 = bus.Subscribe<int>(i =>
+        {
+            log.Add($"a{i}");
+            if (i == 1)
+            {
+                bus.Publish(2);
+            }
+        });
+        using var _2 = bus.Subscribe<int>(i => log.Add($"b{i}"));
+
+        bus.Publish(1);
+
+        Assert.Equal(new[] { "a1", "a2", "b2", "b1" }, log);
+    }
+
+    [Fact]
+    public void HandlerDisposedMidPublish_StillRunsForThatEvent_ButNotTheNext()
+    {
+        var bus = new EventAggregator();
+        IDisposable? second = null;
+        var secondRuns = 0;
+        using var _ = bus.Subscribe<string>(_ => second!.Dispose());
+        second = bus.Subscribe<string>(_ => secondRuns++);
+
+        bus.Publish("one");
+        bus.Publish("two");
+
+        Assert.Equal(1, secondRuns);
+    }
+
+    [Fact]
+    public void HandlerSubscribedMidPublish_DoesNotRunForThatEvent()
+    {
+        var bus = new EventAggregator();
+        var lateRuns = 0;
+        using var _ = bus.Subscribe<string>(_ => bus.Subscribe<int>(__ => lateRuns++));
+        using var __ = bus.Subscribe<string>(s => bus.Subscribe<string>(___ => lateRuns++));
+
+        bus.Publish("one");
+
+        Assert.Equal(0, lateRuns);
+    }
+
+    [Fact]
+    public void Publish_WithSubscribers_DoesNotAllocate()
+    {
+        var bus = new EventAggregator();
+        var sink = 0;
+        using var _ = bus.Subscribe<int>(i => sink += i);
+        var next = 0;
+        Action step = () => bus.Publish(next++);
+        for (var i = 0; i < 2_000; i++)
+        {
+            step();
+        }
+
+        const int windows = 5;
+        var perCall = new long[windows];
+        for (var w = 0; w < windows; w++)
+        {
+            var before = GC.GetAllocatedBytesForCurrentThread();
+            for (var i = 0; i < 10_000; i++)
+            {
+                step();
+            }
+
+            perCall[w] = (GC.GetAllocatedBytesForCurrentThread() - before) / 10_000;
+        }
+
+        // A one-off runtime allocation can land in a single window; the steady state is what matters.
+        Assert.True(perCall.Min() == 0, $"bytes per Publish in each window: {string.Join(", ", perCall)}");
+        Assert.True(sink > 0);
+    }
+
+    [Fact]
+    public void Dispose_RacingFromManyThreads_RemovesExactlyOneRegistration()
+    {
+        var bus = new EventAggregator();
+        Action<int> shared = _ => { };
+        var first = bus.Subscribe(shared);
+        using var second = bus.Subscribe(shared);
+
+        Parallel.For(0, 64, _ => first.Dispose());
+
+        Assert.Equal(1, bus.SubscriberCount<int>());
+    }
+
+    [Fact]
+    public async Task ConcurrentSubscribePublishUnsubscribe_NeverLosesOrDuplicatesDeliveries()
+    {
+        var bus = new EventAggregator();
+        var stable = 0;
+        using var _ = bus.Subscribe<int>(_ => Interlocked.Increment(ref stable));
+        const int publishes = 20_000;
+
+        var churn = Task.Run(() =>
+        {
+            for (var i = 0; i < 5_000; i++)
+            {
+                bus.Subscribe<int>(__ => { }).Dispose();
+            }
+        }, TestContext.Current.CancellationToken);
+        Parallel.For(0, publishes, i => bus.Publish(i));
+        await churn;
+
+        Assert.Equal(publishes, stable);
+        Assert.Equal(1, bus.SubscriberCount<int>());
     }
 }

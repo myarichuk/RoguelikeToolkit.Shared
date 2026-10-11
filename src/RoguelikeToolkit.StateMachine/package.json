@@ -5,6 +5,9 @@
   "unity": "2021.2",
   "description": "Finite state machine with shared context, guards, entry/exit actions, and transition sink.",
   "license": "Apache-2.0",
+  "licensesUrl": "https://github.com/myarichuk/RoguelikeToolkit.Shared/blob/master/LICENSE",
+  "documentationUrl": "https://github.com/myarichuk/RoguelikeToolkit.Shared/tree/master/src/RoguelikeToolkit.StateMachine#readme",
+  "changelogUrl": "https://github.com/myarichuk/RoguelikeToolkit.Shared/blob/master/src/RoguelikeToolkit.StateMachine/CHANGELOG.md",
   "author": {
     "name": "RoguelikeToolkit Contributors"
   },
