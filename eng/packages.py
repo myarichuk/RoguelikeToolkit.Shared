@@ -201,6 +201,20 @@ def cmd_check(_args):
         if d not in known:
             err(f"release-please entry '{d}' has no package under src/")
 
+    # A non-generic type named like a package's namespace (RoguelikeToolkit.EventAggregator.EventAggregator) is
+    # unusable from any RoguelikeToolkit.* namespace: the simple name binds to the sibling namespace first (CS0118).
+    titles = {p["title"] for p in pkgs}
+    decl = re.compile(r"\b(?:class|struct|interface|enum|record|delegate)\s+(?:\w+\s+)*?(" + "|".join(map(re.escape, sorted(titles))) + r")\b(?!\s*<)") if titles else None
+    for p in pkgs:
+        for cs in sorted((ROOT / p["dir"]).rglob("*.cs")):
+            if any(part in ("bin", "obj") for part in cs.relative_to(ROOT / p["dir"]).parts):
+                continue
+            for n, line in enumerate(cs.read_text().splitlines(), 1):
+                m = decl.search(line) if decl else None
+                if m and not line.lstrip().startswith("//"):
+                    err(f"{cs.relative_to(ROOT)}:{n}: type '{m.group(1)}' has the same name as a package namespace; "
+                        f"consumers under RoguelikeToolkit.* could not use it unqualified")
+
     for wf in sorted((ROOT / ".github/workflows").glob("*.yml")):
         for n, line in enumerate(wf.read_text().splitlines(), 1):
             m = re.match(r"\s*-?\s*uses:\s*([^\s#]+)", line)

@@ -6,14 +6,16 @@
 Small .NET building blocks for roguelike (and other) games. Apache-2.0.
 
 - `RoguelikeToolkit.EventAggregator` — synchronous in-process pub/sub (`EventBus`). Thread-safe; publishing allocates nothing.
+- `RoguelikeToolkit.Determinism` — building blocks for replayable simulations: a seeded snapshot-able RNG whose `Derive` streams don't depend on how far the parent advanced, and a thread-safe sequenced queue with a single-thread drain.
 - `RoguelikeToolkit.StateMachine` — FSM with shared context, ordered guarded branches, entry/exit actions. Thread-safe; `Post` from any thread and `Pump` on yours (e.g. Unity's main thread) without the machine knowing about Unity.
 
-Both target `netstandard2.1` (Unity 2021.2+) with zero dependencies. Language is capped at C# 9 in `src/` so the shipped DLLs stay runnable on older Unity runtimes. Tests are xUnit under `tests/`.
+All target `netstandard2.1` (Unity 2021.2+) with zero dependencies. Language is capped at C# 9 in `src/` so the shipped DLLs stay runnable on older Unity runtimes. Tests are xUnit under `tests/`.
 
 ## Use
 
 Unity (UPM), via git URL for now. **Experimental:** the packages ship no `.meta` files yet, which Unity may need to import them from an immutable package folder, so this path is unverified:
 
+- `https://github.com/myarichuk/RoguelikeToolkit.Shared.git?path=/src/RoguelikeToolkit.Determinism`
 - `https://github.com/myarichuk/RoguelikeToolkit.Shared.git?path=/src/RoguelikeToolkit.EventAggregator`
 - `https://github.com/myarichuk/RoguelikeToolkit.Shared.git?path=/src/RoguelikeToolkit.StateMachine`
 
@@ -36,6 +38,9 @@ dotnet test
   CI builds `eng/UnityCompat` to prove it.
 - **Every Unity-visible file in a package has a `.meta`** (deterministic GUIDs). `python3 eng/packages.py meta --fix` creates them.
 - **Package versions live in `Directory.Packages.props`;** workflow actions are pinned to commit SHAs (Dependabot keeps both fresh).
+
+- **Never name a public type like a package namespace** (`RoguelikeToolkit.Foo.Foo`): from any `RoguelikeToolkit.*` namespace the simple name
+  binds to the sibling namespace first (CS0118). `eng/packages.py check` rejects it. That is also why the RNG package is `Determinism`, not `Random`.
 
 ### Adding a package
 
