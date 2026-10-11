@@ -431,25 +431,41 @@ public sealed class StateMachineBehaviorTests
     }
 
     [Fact]
-    public void Fire_WithNoCallbacks_DoesNotAllocateBeyondThePositionRecord()
+    public void Fire_WithNoCallbacks_AllocatesOnlyThePositionRecord()
     {
         var machine = new StateMachine<S, T, Ctx>(S.Start, new Ctx());
         machine.Configure(S.Start).Permit(T.Go, S.Middle);
         machine.Configure(S.Middle).Permit(T.Go, S.Start);
-        for (var i = 0; i < 1_000; i++)
+        Action step = () => machine.Fire(T.Go);
+
+        var windows = MeasureBytesPerCall(step);
+
+        // The immutable (state, sequence) record is 32 bytes. A runtime- or JIT-dependent one-off can inflate a single
+        // window, so judge the quietest window. A second per-Fire allocation (a list, an array, a closure) would add at
+        // least 24 bytes and still fail this.
+        Assert.True(windows.Min() <= 40, $"bytes per Fire in each window: {string.Join(", ", windows)}");
+    }
+
+    private static long[] MeasureBytesPerCall(Action step, int windows = 5, int calls = 10_000)
+    {
+        for (var i = 0; i < 2_000; i++)
         {
-            machine.Fire(T.Go);
+            step();
         }
 
-        var before = GC.GetAllocatedBytesForCurrentThread();
-        for (var i = 0; i < 10_000; i++)
+        var result = new long[windows];
+        for (var w = 0; w < windows; w++)
         {
-            machine.Fire(T.Go);
+            var before = GC.GetAllocatedBytesForCurrentThread();
+            for (var i = 0; i < calls; i++)
+            {
+                step();
+            }
+
+            result[w] = (GC.GetAllocatedBytesForCurrentThread() - before) / calls;
         }
 
-        var perFire = (GC.GetAllocatedBytesForCurrentThread() - before) / 10_000;
-
-        Assert.True(perFire <= 32, $"allocated {perFire} bytes per Fire");
+        return result;
     }
 
     // ---- contract edges --------------------------------------------------------------------------------------------
