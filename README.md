@@ -54,7 +54,7 @@ discover the package from the folder, so they need no edit.
 
 Automatic per package, nothing to do by hand. Push `feat:`/`fix:` commits to `master`, release-please opens a release PR, merge it and the tag + publish (NuGet, UPM tarball) happen on their own. Unchanged packages get no release.
 
-One-time setup (already done here, noted for forks): `PUBLISH_ENABLED=true` repo variable, nuget.org trusted publisher for `publish.yml`, OpenUPM registration.
+One-time setup (already done here, noted for forks): `PUBLISH_ENABLED=true` repo variable, nuget.org trusted publisher for `publish.yml`, OpenUPM registration, and the `RELEASE_PLEASE_TOKEN` secret. How to create, check and rotate that token, and why it is not the default `GITHUB_TOKEN`: [docs/RELEASING.md](docs/RELEASING.md).
 
 ## License
 
