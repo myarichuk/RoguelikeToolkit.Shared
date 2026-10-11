@@ -451,4 +451,65 @@ public sealed class StateMachineBehaviorTests
 
         Assert.True(perFire <= 32, $"allocated {perFire} bytes per Fire");
     }
+
+    // ---- contract edges --------------------------------------------------------------------------------------------
+
+    [Fact]
+    public void NullArguments_ToTheRemainingEntryPoints_Throw()
+    {
+        var machine = new StateMachine<string, string, Ctx>("a", new Ctx());
+
+        Assert.Throws<ArgumentNullException>(() => new StateMachine<string, string, Ctx>(null!, new Ctx()));
+        Assert.Throws<ArgumentNullException>(() => new StateMachine<string, string>(null!));
+        Assert.Throws<ArgumentNullException>(() => machine.Post(null!));
+        Assert.Throws<ArgumentNullException>(() => machine.Restore(null!, 0));
+    }
+
+    [Fact]
+    public void Restore_NegativeSequence_Throws_AndChangesNothing()
+    {
+        var machine = new StateMachine<S, T, Ctx>(S.Start, new Ctx());
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => machine.Restore(S.End, -1));
+
+        Assert.Equal(S.Start, machine.State);
+        Assert.Equal(0, machine.Sequence);
+    }
+
+    [Fact]
+    public void Start_FromInsideACallback_Throws()
+    {
+        StateMachine<S, T, Ctx>? machine = null;
+        machine = new StateMachine<S, T, Ctx>(S.Start, new Ctx());
+        machine.Configure(S.Start).Permit(T.Go, S.Middle);
+        machine.Configure(S.Middle).OnEntry(_ => machine!.Start());
+
+        Assert.Throws<InvalidOperationException>(() => machine.Fire(T.Go));
+    }
+
+    [Fact]
+    public void Start_WhenAnInitialEntryActionThrows_SurfacesIt_AndStillDrainsQueuedTriggers()
+    {
+        var machine = new StateMachine<S, T, Ctx>(S.Start, new Ctx());
+        machine.Configure(S.Start).Permit(T.Go, S.Middle).OnEntry(_ => throw new InvalidOperationException("initial entry boom"));
+        machine.Post(T.Go);
+
+        var e = Assert.Throws<InvalidOperationException>(() => machine.Start());
+
+        Assert.Equal("initial entry boom", e.Message);
+        Assert.Equal(S.Middle, machine.State);
+        Assert.Throws<InvalidOperationException>(() => machine.Start()); // it did start
+    }
+
+    [Fact]
+    public void StateTransition_ToString_ShowsTheTransition_AndAnEntryFailure()
+    {
+        var ok = new StateTransition<S, T>(S.Start, S.Middle, T.Go, 3);
+        var failed = new StateTransition<S, T>(S.Start, S.Middle, T.Go, 4, new ArgumentException("x"));
+
+        Assert.Equal("Start --Go--> Middle #3", ok.ToString());
+        Assert.Equal("Start --Go--> Middle #4 (entry failed: ArgumentException)", failed.ToString());
+        Assert.False(ok.HasFailed);
+        Assert.True(failed.HasFailed);
+    }
 }

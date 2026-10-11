@@ -388,6 +388,12 @@ public sealed class DeterministicRandomTests
     }
 
     [Fact]
+    public void WeightedIndex_NullWeights_Throws()
+    {
+        Assert.Throws<ArgumentNullException>(() => new DeterministicRandom(1).WeightedIndex(null!));
+    }
+
+    [Fact]
     public void WeightedIndex_SingleCandidate_IsIndexZero()
     {
         Assert.Equal(0, new DeterministicRandom(1).WeightedIndex(new[] { 2.5 }));

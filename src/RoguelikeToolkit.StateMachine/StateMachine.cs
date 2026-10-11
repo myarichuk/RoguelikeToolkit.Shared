@@ -313,11 +313,7 @@ namespace RoguelikeToolkit.StateMachine
 
         internal void Permit(TState state, TTrigger trigger, TState destination, Func<TContext, bool>? guard)
         {
-            if (state is null)
-            {
-                throw new ArgumentNullException(nameof(state));
-            }
-
+            // 'state' always comes from a StateConfiguration, which Configure() has already null-checked.
             if (trigger is null)
             {
                 throw new ArgumentNullException(nameof(trigger));
@@ -352,11 +348,7 @@ namespace RoguelikeToolkit.StateMachine
 
         internal void Ignore(TState state, TTrigger trigger)
         {
-            if (state is null)
-            {
-                throw new ArgumentNullException(nameof(state));
-            }
-
+            // 'state' always comes from a StateConfiguration, which Configure() has already null-checked.
             if (trigger is null)
             {
                 throw new ArgumentNullException(nameof(trigger));
@@ -379,11 +371,7 @@ namespace RoguelikeToolkit.StateMachine
 
         private void Append(Dictionary<TState, Action<TContext>[]> target, TState state, Action<TContext> action)
         {
-            if (state is null)
-            {
-                throw new ArgumentNullException(nameof(state));
-            }
-
+            // 'state' always comes from a StateConfiguration, which Configure() has already null-checked.
             if (action is null)
             {
                 throw new ArgumentNullException(nameof(action));
