@@ -1,0 +1,41 @@
+#nullable enable
+override RoguelikeToolkit.StateMachine.StateTransition<TState, TTrigger>.ToString() -> string!
+RoguelikeToolkit.StateMachine.EmptyTransitionSink<TState, TTrigger, TContext>
+RoguelikeToolkit.StateMachine.EmptyTransitionSink<TState, TTrigger, TContext>.OnTransition(RoguelikeToolkit.StateMachine.StateTransition<TState, TTrigger> transition, TContext! context) -> void
+RoguelikeToolkit.StateMachine.IStateTransitionSink<TState, TTrigger, TContext>
+RoguelikeToolkit.StateMachine.IStateTransitionSink<TState, TTrigger, TContext>.OnTransition(RoguelikeToolkit.StateMachine.StateTransition<TState, TTrigger> transition, TContext! context) -> void
+RoguelikeToolkit.StateMachine.StateConfiguration<TState, TTrigger, TContext>
+RoguelikeToolkit.StateMachine.StateConfiguration<TState, TTrigger, TContext>.Ignore(TTrigger trigger) -> RoguelikeToolkit.StateMachine.StateConfiguration<TState, TTrigger, TContext!>!
+RoguelikeToolkit.StateMachine.StateConfiguration<TState, TTrigger, TContext>.OnEntry(System.Action<TContext!>! action) -> RoguelikeToolkit.StateMachine.StateConfiguration<TState, TTrigger, TContext!>!
+RoguelikeToolkit.StateMachine.StateConfiguration<TState, TTrigger, TContext>.OnExit(System.Action<TContext!>! action) -> RoguelikeToolkit.StateMachine.StateConfiguration<TState, TTrigger, TContext!>!
+RoguelikeToolkit.StateMachine.StateConfiguration<TState, TTrigger, TContext>.Permit(TTrigger trigger, TState destination, System.Func<TContext!, bool>? guard = null) -> RoguelikeToolkit.StateMachine.StateConfiguration<TState, TTrigger, TContext!>!
+RoguelikeToolkit.StateMachine.StateMachine<TState, TTrigger, TContext>
+RoguelikeToolkit.StateMachine.StateMachine<TState, TTrigger, TContext>.CanFire(TTrigger trigger) -> bool
+RoguelikeToolkit.StateMachine.StateMachine<TState, TTrigger, TContext>.Configure(TState state) -> RoguelikeToolkit.StateMachine.StateConfiguration<TState, TTrigger, TContext!>!
+RoguelikeToolkit.StateMachine.StateMachine<TState, TTrigger, TContext>.Context.get -> TContext!
+RoguelikeToolkit.StateMachine.StateMachine<TState, TTrigger, TContext>.Fire(TTrigger trigger) -> void
+RoguelikeToolkit.StateMachine.StateMachine<TState, TTrigger, TContext>.GetPermittedTriggers() -> System.Collections.Generic.IReadOnlyList<TTrigger>!
+RoguelikeToolkit.StateMachine.StateMachine<TState, TTrigger, TContext>.IsIn(TState state) -> bool
+RoguelikeToolkit.StateMachine.StateMachine<TState, TTrigger, TContext>.Post(TTrigger trigger) -> void
+RoguelikeToolkit.StateMachine.StateMachine<TState, TTrigger, TContext>.Pump() -> void
+RoguelikeToolkit.StateMachine.StateMachine<TState, TTrigger, TContext>.Restore(TState state, long sequence) -> void
+RoguelikeToolkit.StateMachine.StateMachine<TState, TTrigger, TContext>.Sequence.get -> long
+RoguelikeToolkit.StateMachine.StateMachine<TState, TTrigger, TContext>.Start() -> void
+RoguelikeToolkit.StateMachine.StateMachine<TState, TTrigger, TContext>.State.get -> TState
+RoguelikeToolkit.StateMachine.StateMachine<TState, TTrigger, TContext>.StateMachine(TState initialState, TContext! context, RoguelikeToolkit.StateMachine.IStateTransitionSink<TState, TTrigger, TContext!>? sink = null, System.Action? onPosted = null) -> void
+RoguelikeToolkit.StateMachine.StateMachine<TState, TTrigger>
+RoguelikeToolkit.StateMachine.StateMachine<TState, TTrigger>.CanFire(TTrigger trigger) -> bool
+RoguelikeToolkit.StateMachine.StateMachine<TState, TTrigger>.Configure(TState state, TTrigger trigger, TState destination) -> RoguelikeToolkit.StateMachine.StateMachine<TState, TTrigger>!
+RoguelikeToolkit.StateMachine.StateMachine<TState, TTrigger>.Fire(TTrigger trigger) -> void
+RoguelikeToolkit.StateMachine.StateMachine<TState, TTrigger>.State.get -> TState
+RoguelikeToolkit.StateMachine.StateMachine<TState, TTrigger>.StateMachine(TState initialState) -> void
+RoguelikeToolkit.StateMachine.StateTransition<TState, TTrigger>
+RoguelikeToolkit.StateMachine.StateTransition<TState, TTrigger>.Error.get -> System.Exception?
+RoguelikeToolkit.StateMachine.StateTransition<TState, TTrigger>.From.get -> TState
+RoguelikeToolkit.StateMachine.StateTransition<TState, TTrigger>.HasFailed.get -> bool
+RoguelikeToolkit.StateMachine.StateTransition<TState, TTrigger>.Sequence.get -> long
+RoguelikeToolkit.StateMachine.StateTransition<TState, TTrigger>.StateTransition() -> void
+RoguelikeToolkit.StateMachine.StateTransition<TState, TTrigger>.StateTransition(TState from, TState to, TTrigger trigger, long sequence, System.Exception? error = null) -> void
+RoguelikeToolkit.StateMachine.StateTransition<TState, TTrigger>.To.get -> TState
+RoguelikeToolkit.StateMachine.StateTransition<TState, TTrigger>.Trigger.get -> TTrigger
+static RoguelikeToolkit.StateMachine.EmptyTransitionSink<TState, TTrigger, TContext>.Instance.get -> RoguelikeToolkit.StateMachine.EmptyTransitionSink<TState, TTrigger, TContext!>!
