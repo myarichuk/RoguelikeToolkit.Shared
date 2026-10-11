@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PackageId>RoguelikeToolkit.Determinism</PackageId>
+    <!-- Independent per-package versions: release-please tags look like determinism-v1.2.3. -->
+    <MinVerTagPrefix>determinism-v</MinVerTagPrefix>
+    <Description>Building blocks for replayable simulations: a seeded, snapshot-able random generator with order-independent derived streams, and a thread-safe sequenced queue with a single-thread drain.</Description>
+    <PackageTags>random;prng;splitmix64;deterministic;replay;seed;queue;roguelike;unity;netstandard</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="RoguelikeToolkit.Determinism.Tests" />
+  </ItemGroup>
+
+</Project>

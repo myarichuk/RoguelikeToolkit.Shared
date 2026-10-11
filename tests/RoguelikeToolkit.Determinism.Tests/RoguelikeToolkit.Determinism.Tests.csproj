@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\RoguelikeToolkit.Determinism\RoguelikeToolkit.Determinism.csproj" />
+  </ItemGroup>
+
+</Project>
