@@ -14,8 +14,7 @@ on:
     tags: ['*-v*']
 
 permissions:
-  contents: write
-  id-token: write # Required for NuGet trusted publishing (OIDC).
+  contents: read
 
 jobs:
   publish:
@@ -27,44 +26,39 @@ jobs:
     # so fork tag pushes never publish.
     if: github.repository == 'myarichuk/RoguelikeToolkit.Shared'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # Attach the UPM tarball to the GitHub Release.
+      id-token: write # Required for NuGet trusted publishing (OIDC).
     steps:
-      - name: Resolve package from tag
-        id: target
-        run: |
-          case "${GITHUB_REF_NAME}" in
-            event-aggregator-v*)
-              echo "title=EventAggregator" >> "$GITHUB_OUTPUT"
-              echo "csproj=src/RoguelikeToolkit.EventAggregator/RoguelikeToolkit.EventAggregator.csproj" >> "$GITHUB_OUTPUT"
-              echo "upm_dir=src/RoguelikeToolkit.EventAggregator" >> "$GITHUB_OUTPUT"
-              echo "openupm_package=com.rogueliketoolkit.event-aggregator" >> "$GITHUB_OUTPUT"
-              ;;
-            state-machine-v*)
-              echo "title=StateMachine" >> "$GITHUB_OUTPUT"
-              echo "csproj=src/RoguelikeToolkit.StateMachine/RoguelikeToolkit.StateMachine.csproj" >> "$GITHUB_OUTPUT"
-              echo "upm_dir=src/RoguelikeToolkit.StateMachine" >> "$GITHUB_OUTPUT"
-              echo "openupm_package=com.rogueliketoolkit.state-machine" >> "$GITHUB_OUTPUT"
-              ;;
-            *)
-              echo "::error::Unknown tag prefix: ${GITHUB_REF_NAME}"
-              exit 1
-              ;;
-          esac
-
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           # Full history + tags so MinVer can compute the version.
           fetch-depth: 0
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - name: Resolve package from tag
+        # Convention-driven (eng/packages.py): the tag's component names the package whose
+        # package.json is src/<Name>/package.json. No per-package case statement to maintain.
+        id: target
+        run: python3 eng/packages.py resolve "${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Tag version must match package.json
+        run: |
+          actual="$(jq -r .version "${{ steps.target.outputs.dir }}/package.json")"
+          if [ "$actual" != "${{ steps.target.outputs.version }}" ]; then
+            echo "::error::Tag says ${{ steps.target.outputs.version }} but package.json says $actual"
+            exit 1
+          fi
+
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: 10.0.x
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
+
+      - name: Check repo consistency
+        run: python3 eng/packages.py check
 
       - name: Restore
         run: dotnet restore
@@ -78,10 +72,13 @@ jobs:
       - name: Pack NuGet
         run: dotnet pack "${{ steps.target.outputs.csproj }}" --no-build -c Release -o ./nupkgs
 
+      - name: Inspect package
+        run: python3 eng/packages.py pack-check ./nupkgs --component "${{ steps.target.outputs.component }}"
+
       - name: Login to NuGet (trusted publishing)
         id: nuget-login
         if: vars.PUBLISH_ENABLED == 'true'
-        uses: NuGet/login@v1
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
         with:
           # Required input: the nuget.org username the trusted publisher is registered under.
           user: michael.yarichuk
@@ -100,7 +97,7 @@ jobs:
         run: |
           mkdir -p "$GITHUB_WORKSPACE/upm-dist"
           npm pack --pack-destination "$GITHUB_WORKSPACE/upm-dist"
-        working-directory: ${{ steps.target.outputs.upm_dir }}
+        working-directory: ${{ steps.target.outputs.dir }}
 
       - name: Attach UPM tarball to release
         run: gh release upload "${GITHUB_REF_NAME}" ./upm-dist/*.tgz --clobber
@@ -109,8 +106,8 @@ jobs:
 
       - name: Notify OpenUPM
         if: vars.PUBLISH_ENABLED == 'true'
-        uses: openupm/openupm-action@v1
+        uses: openupm/openupm-action@89b79dc8dd6cb319efff06727f8fa0051ce7e517 # v1.0.1
         continue-on-error: true # No-op until the one-time OpenUPM registration is done (see README.md).
         with:
-          package: ${{ steps.target.outputs.openupm_package }}
+          package: ${{ steps.target.outputs.name }}
           tag: ${{ github.ref_name }}

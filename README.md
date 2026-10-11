@@ -28,6 +28,22 @@ dotnet build
 dotnet test
 ```
 
+## Conventions
+
+- **Public API is tracked.** Anything public must appear in the package's `PublicAPI.Unshipped.txt`, or the build fails (RS0016).
+  Add it with `dotnet format analyzers src/<Package> --diagnostics RS0016`. Everything is still "unshipped" while the packages are 0.x.
+- **Sources must compile the way Unity compiles them** (C# 9, nullable context off): keep `#nullable enable` at the top of every `src/` file.
+  CI builds `eng/UnityCompat` to prove it.
+- **Every Unity-visible file in a package has a `.meta`** (deterministic GUIDs). `python3 eng/packages.py meta --fix` creates them.
+- **Package versions live in `Directory.Packages.props`;** workflow actions are pinned to commit SHAs (Dependabot keeps both fresh).
+
+### Adding a package
+
+Create `src/RoguelikeToolkit.<Name>/` with a `package.json` (name `com.rogueliketoolkit.<component>`), then run
+`python3 eng/packages.py check`. It lists everything else that needs an entry: csproj (`PackageId`, `MinVerTagPrefix`), asmdef,
+README, API files, `.npmignore`, solution, release-please config and manifest, and the tests project. CI and the publish workflow
+discover the package from the folder, so they need no edit.
+
 ## Releases
 
 Automatic per package, nothing to do by hand. Push `feat:`/`fix:` commits to `master`, release-please opens a release PR, merge it and the tag + publish (NuGet, UPM tarball) happen on their own. Unchanged packages get no release.

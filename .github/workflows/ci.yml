@@ -5,101 +5,134 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-and-test:
+  repo:
+    # Cheap structural checks, and the package list every other job fans out over.
+    # A new package under src/ shows up here with no workflow edit.
+    name: Repo checks
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.packages.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Check package consistency (solution, release config, .meta files, pinned actions)
+        run: python3 eng/packages.py check
+
+      - name: List packages
+        id: packages
+        run: echo "matrix=$(python3 eng/packages.py matrix)" >> "$GITHUB_OUTPUT"
+
+  package:
+    name: ${{ matrix.title }}
+    needs: repo
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.repo.outputs.matrix) }}
     env:
-      # Mirrored here (rather than read via secrets.* in `if:`, which GitHub
-      # rejects) so steps can gate on its presence. Empty on fork PRs.
+      # Mirrored here (rather than read via secrets.* in `if:`, which GitHub rejects) so steps can
+      # gate on its presence. Empty on fork PRs.
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           # Full history + tags so MinVer can compute semantic versions.
           fetch-depth: 0
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: 10.0.x
 
       - name: Restore
-        run: dotnet restore
+        run: dotnet restore ${{ matrix.tests }}
 
-      - name: Build
-        run: dotnet build --no-restore -c Release
+      - name: Build (warnings are errors; includes the public API analyzer)
+        run: dotnet build ${{ matrix.tests }} --no-restore -c Release
 
-      - name: Test with coverage (EventAggregator)
-        run: dotnet test tests/RoguelikeToolkit.EventAggregator.Tests/RoguelikeToolkit.EventAggregator.Tests.csproj --no-build -c Release -s coverlet.runsettings --collect:"XPlat Code Coverage" --results-directory ./TestResults/event-aggregator
+      - name: Compile the sources the way Unity does (C# 9, nullable context off)
+        run: dotnet build eng/UnityCompat -c Release -p:PackageDir="$GITHUB_WORKSPACE/${{ matrix.dir }}"
 
-      - name: Test with coverage (StateMachine)
-        run: dotnet test tests/RoguelikeToolkit.StateMachine.Tests/RoguelikeToolkit.StateMachine.Tests.csproj --no-build -c Release -s coverlet.runsettings --collect:"XPlat Code Coverage" --results-directory ./TestResults/state-machine
+      - name: Test with coverage
+        run: >
+          dotnet test ${{ matrix.tests }} --no-build -c Release
+          -s coverlet.runsettings --collect:"XPlat Code Coverage" --results-directory ./TestResults
 
       - name: Restore .NET tools
         run: dotnet tool restore
 
-      - name: Generate coverage reports
-        run: |
-          dotnet reportgenerator -reports:"TestResults/event-aggregator/**/coverage.cobertura.xml" -targetdir:"coveragereport/event-aggregator" -reporttypes:"MarkdownSummaryGithub;Cobertura;Html"
-          dotnet reportgenerator -reports:"TestResults/state-machine/**/coverage.cobertura.xml" -targetdir:"coveragereport/state-machine" -reporttypes:"MarkdownSummaryGithub;Cobertura;Html"
+      - name: Generate coverage report
+        run: >
+          dotnet reportgenerator -reports:"TestResults/**/coverage.cobertura.xml"
+          -targetdir:coveragereport -reporttypes:"MarkdownSummaryGithub;Cobertura;Html"
 
-      - name: Publish coverage summaries
+      - name: Publish coverage summary
         run: |
           {
-            echo "## EventAggregator"
-            cat coveragereport/event-aggregator/SummaryGithub.md
-            echo "## StateMachine"
-            cat coveragereport/state-machine/SummaryGithub.md
+            echo "## ${{ matrix.title }}"
+            cat coveragereport/SummaryGithub.md
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Upload coverage to Codecov (EventAggregator)
+      - name: Upload coverage to Codecov
         # Secrets are empty on PRs from forks, so skip instead of failing.
         if: env.CODECOV_TOKEN != ''
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
         with:
-          files: coveragereport/event-aggregator/Cobertura.xml
-          flags: event-aggregator
+          files: coveragereport/Cobertura.xml
+          flags: ${{ matrix.component }}
           token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: true
 
-      - name: Upload coverage to Codecov (StateMachine)
-        # Secrets are empty on PRs from forks, so skip instead of failing.
-        if: env.CODECOV_TOKEN != ''
-        uses: codecov/codecov-action@v5
-        with:
-          files: coveragereport/state-machine/Cobertura.xml
-          flags: state-machine
-          token: ${{ secrets.CODECOV_TOKEN }}
-          fail_ci_if_error: true
-
-      - name: Enforce coverage thresholds (90% lines, per project)
+      - name: Enforce coverage threshold (90% lines)
         run: |
-          python3 - <<'EOF'
+          python3 - <<'PY'
           import sys, xml.etree.ElementTree as ET
-          ok = True
-          for project in ("event-aggregator", "state-machine"):
-              rate = float(ET.parse(f"coveragereport/{project}/Cobertura.xml").getroot().attrib["line-rate"])
-              print(f"{project}: line coverage {rate:.1%} (threshold 90%)")
-              if rate < 0.90:
-                  print(f"::error::{project} line coverage below the 90% threshold")
-                  ok = False
-          sys.exit(0 if ok else 1)
-          EOF
+          rate = float(ET.parse("coveragereport/Cobertura.xml").getroot().attrib["line-rate"])
+          print(f"${{ matrix.component }}: line coverage {rate:.1%} (threshold 90%)")
+          if rate < 0.90:
+              print("::error::${{ matrix.component }} line coverage below the 90% threshold")
+              sys.exit(1)
+          PY
 
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: coverage-report
+          name: coverage-${{ matrix.component }}
           path: coveragereport/
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+  pack:
+    # Packs everything exactly as the publish workflow will, and inspects the result.
+    name: Pack and inspect
+    needs: repo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 20
 
-      - name: Validate UPM packages
-        run: |
-          npm pack --dry-run --pack-destination /tmp ./src/RoguelikeToolkit.EventAggregator
-          npm pack --dry-run --pack-destination /tmp ./src/RoguelikeToolkit.StateMachine
+      - name: Pack NuGet packages
+        run: dotnet pack RoguelikeToolkit.slnx -c Release -o ./nupkgs
+
+      - name: Inspect NuGet packages and UPM tarballs
+        run: python3 eng/packages.py pack-check ./nupkgs
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: nupkgs
+          path: nupkgs/
