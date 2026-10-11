@@ -14,4 +14,9 @@
     <PackageTags>events;event-aggregator;messaging;pubsub;roguelike;unity;netstandard</PackageTags>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Channel and manager are internal plumbing; the tests exercise them directly. -->
+    <InternalsVisibleTo Include="RoguelikeToolkit.EventAggregator.Tests" />
+  </ItemGroup>
+
 </Project>

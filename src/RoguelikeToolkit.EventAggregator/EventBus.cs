@@ -2,8 +2,11 @@ using System;
 
 namespace RoguelikeToolkit.EventAggregator
 {
-    /// <summary>In-process event aggregator.</summary>
-    public class EventAggregator : IEventAggregator
+    /// <summary>
+    /// In-process, synchronous event bus. Thread-safe: any thread may subscribe, unsubscribe and publish.
+    /// Handlers run on the publishing thread.
+    /// </summary>
+    public sealed class EventBus : IEventAggregator
     {
         private readonly SubscriberManager _manager = new SubscriberManager();
 
@@ -17,6 +20,12 @@ namespace RoguelikeToolkit.EventAggregator
         public void Publish<TEvent>(TEvent @event)
         {
             _manager.Publish(@event);
+        }
+
+        /// <inheritdoc />
+        public void PublishByRuntimeType(object @event)
+        {
+            _manager.PublishByRuntimeType(@event);
         }
 
         /// <inheritdoc />
