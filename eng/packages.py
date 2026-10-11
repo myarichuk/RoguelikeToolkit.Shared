@@ -14,7 +14,7 @@ A package is a directory src/<Name>/ that contains a package.json. Everything el
   tests       = tests/<Name>.Tests/<Name>.Tests.csproj
   git tag     = <component>-v<version>
 
-Adding a package: create the directory, then `packages.py meta --fix` and `packages.py check`; the check lists every
+Adding a package: create the directory (with a `# Changelog` CHANGELOG.md, which release-please later fills in), then `packages.py meta --fix` and `packages.py check`; the check lists every
 other file that needs an entry (solution, release-please config and manifest).
 """
 import hashlib
@@ -171,7 +171,9 @@ def cmd_check(_args):
     for p in pkgs:
         d, j, c = p["dir"], p["json"], p["component"]
         stem = Path(d).name
-        for must in (f"{stem}.csproj", f"{stem}.asmdef", "package.json", "README.md", ".npmignore",
+        # CHANGELOG.md must exist (and have its .meta) before the first release: release-please would otherwise create it in
+        # the release PR, where nobody has given it a .meta and this very check fails.
+        for must in (f"{stem}.csproj", f"{stem}.asmdef", "package.json", "README.md", "CHANGELOG.md", ".npmignore",
                      "PublicAPI.Shipped.txt", "PublicAPI.Unshipped.txt"):
             if not (ROOT / d / must).exists():
                 err(f"{d}: missing {must}")
