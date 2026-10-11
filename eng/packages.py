@@ -201,9 +201,12 @@ def cmd_check(_args):
         if d not in known:
             err(f"release-please entry '{d}' has no package under src/")
 
+    # Accepted exceptions, by decision: the consumers that matter will live outside the RoguelikeToolkit.* namespace
+    # tree (StoryManager is being re-namespaced), and anyone else can alias the type or qualify it.
+    allowed = {"EventAggregator"}
     # A non-generic type named like a package's namespace (RoguelikeToolkit.EventAggregator.EventAggregator) is
     # unusable from any RoguelikeToolkit.* namespace: the simple name binds to the sibling namespace first (CS0118).
-    titles = {p["title"] for p in pkgs}
+    titles = {p["title"] for p in pkgs} - allowed
     decl = re.compile(r"\b(?:class|struct|interface|enum|record|delegate)\s+(?:\w+\s+)*?(" + "|".join(map(re.escape, sorted(titles))) + r")\b(?!\s*<)") if titles else None
     for p in pkgs:
         for cs in sorted((ROOT / p["dir"]).rglob("*.cs")):

@@ -5,7 +5,7 @@
 
 Small .NET building blocks for roguelike (and other) games. Apache-2.0.
 
-- `RoguelikeToolkit.EventAggregator` — synchronous in-process pub/sub (`EventBus`). Thread-safe; publishing allocates nothing.
+- `RoguelikeToolkit.EventAggregator` — synchronous in-process pub/sub (`EventAggregator`). Thread-safe; publishing allocates nothing.
 - `RoguelikeToolkit.Determinism` — building blocks for replayable simulations: a seeded snapshot-able RNG whose `Derive` streams don't depend on how far the parent advanced, and a thread-safe sequenced queue with a single-thread drain.
 - `RoguelikeToolkit.StateMachine` — FSM with shared context, ordered guarded branches, entry/exit actions. Thread-safe; `Post` from any thread and `Pump` on yours (e.g. Unity's main thread) without the machine knowing about Unity.
 
@@ -41,6 +41,7 @@ dotnet test
 
 - **Never name a public type like a package namespace** (`RoguelikeToolkit.Foo.Foo`): from any `RoguelikeToolkit.*` namespace the simple name
   binds to the sibling namespace first (CS0118). `eng/packages.py check` rejects it. That is also why the RNG package is `Determinism`, not `Random`.
+  The one accepted exception is `EventAggregator` (see its README); it is listed in `eng/packages.py`.
 
 ### Adding a package
 

@@ -8,7 +8,7 @@ namespace RoguelikeToolkit.EventAggregator
     /// In-process, synchronous event bus. Thread-safe: any thread may subscribe, unsubscribe and publish.
     /// Handlers run on the publishing thread.
     /// </summary>
-    public sealed class EventBus : IEventAggregator
+    public sealed class EventAggregator : IEventAggregator
     {
         private readonly SubscriberManager _manager = new SubscriberManager();
 

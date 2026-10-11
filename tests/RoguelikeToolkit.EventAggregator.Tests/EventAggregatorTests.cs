@@ -7,7 +7,7 @@ using Xunit;
 
 namespace RoguelikeToolkit.EventAggregator.Tests;
 
-public sealed class EventBusTests
+public sealed class EventAggregatorTests
 {
     private sealed record TestEvent(string Message);
 
@@ -18,7 +18,7 @@ public sealed class EventBusTests
     [Fact]
     public void Publish_DeliversEventToSubscriber()
     {
-        var aggregator = new EventBus();
+        var aggregator = new EventAggregator();
         string? received = null;
         using var _ = aggregator.Subscribe<TestEvent>(e => received = e.Message);
 
@@ -30,7 +30,7 @@ public sealed class EventBusTests
     [Fact]
     public void Dispose_UnsubscribesHandler()
     {
-        var aggregator = new EventBus();
+        var aggregator = new EventAggregator();
         var count = 0;
         var subscription = aggregator.Subscribe<TestEvent>(_ => count++);
 
@@ -44,7 +44,7 @@ public sealed class EventBusTests
     [Fact]
     public void Publish_WithNoSubscribers_DoesNotThrow()
     {
-        var aggregator = new EventBus();
+        var aggregator = new EventAggregator();
 
         var exception = Record.Exception(() => aggregator.Publish(new TestEvent("nobody")));
 
@@ -54,7 +54,7 @@ public sealed class EventBusTests
     [Fact]
     public void Publish_OnlyNotifiesMatchingEventType()
     {
-        var aggregator = new EventBus();
+        var aggregator = new EventAggregator();
         var testCount = 0;
         var otherCount = 0;
         using var _1 = aggregator.Subscribe<TestEvent>(_ => testCount++);
@@ -69,7 +69,7 @@ public sealed class EventBusTests
     [Fact]
     public void Publish_DeliversStructEventToSubscriber()
     {
-        var aggregator = new EventBus();
+        var aggregator = new EventAggregator();
         var received = new List<int>();
         using var _ = aggregator.Subscribe<StructEvent>(e => received.Add(e.Value));
 
@@ -82,7 +82,7 @@ public sealed class EventBusTests
     [Fact]
     public void Publish_DoesNotConfuseStructAndClassEvents()
     {
-        var aggregator = new EventBus();
+        var aggregator = new EventAggregator();
         var structCount = 0;
         var classCount = 0;
         using var _1 = aggregator.Subscribe<StructEvent>(_ => structCount++);
@@ -97,7 +97,7 @@ public sealed class EventBusTests
     [Fact]
     public void Dispose_CalledTwice_RemainsUnsubscribed()
     {
-        var aggregator = new EventBus();
+        var aggregator = new EventAggregator();
         var count = 0;
         var subscription = aggregator.Subscribe<TestEvent>(_ => count++);
 
@@ -114,7 +114,7 @@ public sealed class EventBusTests
     [Fact]
     public void Subscribe_NullHandler_ThrowsArgumentNullException()
     {
-        var aggregator = new EventBus();
+        var aggregator = new EventAggregator();
 
         var ex = Assert.Throws<ArgumentNullException>(() => aggregator.Subscribe<TestEvent>(null!));
 
@@ -124,7 +124,7 @@ public sealed class EventBusTests
     [Fact]
     public void Dispose_OneOfMultipleSubscriptions_LeavesOthersSubscribed()
     {
-        var aggregator = new EventBus();
+        var aggregator = new EventAggregator();
         var firstCount = 0;
         var secondCount = 0;
         using var _ = aggregator.Subscribe<TestEvent>(_ => firstCount++);
@@ -141,7 +141,7 @@ public sealed class EventBusTests
     [Fact]
     public void Unsubscribe_RemovesHandler_StopsDelivery()
     {
-        var aggregator = new EventBus();
+        var aggregator = new EventAggregator();
         var count = 0;
         void Handler(TestEvent _) => count++;
         aggregator.Subscribe<TestEvent>(Handler);
@@ -156,7 +156,7 @@ public sealed class EventBusTests
     [Fact]
     public void Unsubscribe_UnknownHandler_ReturnsFalse()
     {
-        var aggregator = new EventBus();
+        var aggregator = new EventAggregator();
         void Handler(TestEvent _) { }
         using var _ = aggregator.Subscribe<TestEvent>(_ => { });
 
@@ -167,7 +167,7 @@ public sealed class EventBusTests
     [Fact]
     public void Unsubscribe_NullHandler_ThrowsArgumentNullException()
     {
-        var aggregator = new EventBus();
+        var aggregator = new EventAggregator();
 
         var ex = Assert.Throws<ArgumentNullException>(() => aggregator.Unsubscribe<TestEvent>(null!));
 
@@ -177,7 +177,7 @@ public sealed class EventBusTests
     [Fact]
     public void SubscriberCount_TracksSubscriptions()
     {
-        var aggregator = new EventBus();
+        var aggregator = new EventAggregator();
 
         Assert.Equal(0, aggregator.SubscriberCount<TestEvent>());
 
@@ -477,7 +477,7 @@ public sealed class EventChannelTests
     }
 }
 
-public sealed class EventBusBehaviorTests
+public sealed class EventAggregatorBehaviorTests
 {
     private class BaseEvent
     {
@@ -492,7 +492,7 @@ public sealed class EventBusBehaviorTests
     [Fact]
     public void Publish_UsesStaticType_NotRuntimeType()
     {
-        var bus = new EventBus();
+        var bus = new EventAggregator();
         var baseCount = 0;
         var objectCount = 0;
         using var _1 = bus.Subscribe<BaseEvent>(_ => baseCount++);
@@ -508,7 +508,7 @@ public sealed class EventBusBehaviorTests
     [Fact]
     public void PublishByRuntimeType_DeliversToExactRuntimeTypeOnly()
     {
-        var bus = new EventBus();
+        var bus = new EventAggregator();
         var derived = 0;
         var baseCount = 0;
         using var _1 = bus.Subscribe<DerivedEvent>(_ => derived++);
@@ -523,7 +523,7 @@ public sealed class EventBusBehaviorTests
     [Fact]
     public void PublishByRuntimeType_UnboxesStructEvents()
     {
-        var bus = new EventBus();
+        var bus = new EventAggregator();
         var received = -1;
         using var _ = bus.Subscribe<StructEvent>(e => received = e.Value);
 
@@ -535,7 +535,7 @@ public sealed class EventBusBehaviorTests
     [Fact]
     public void PublishByRuntimeType_NoSubscribers_IsNoOp_AndNullThrows()
     {
-        var bus = new EventBus();
+        var bus = new EventAggregator();
 
         bus.PublishByRuntimeType(new DerivedEvent());
 
@@ -545,7 +545,7 @@ public sealed class EventBusBehaviorTests
     [Fact]
     public void Publish_FromWithinHandler_DeliversDepthFirst()
     {
-        var bus = new EventBus();
+        var bus = new EventAggregator();
         var log = new List<string>();
         using var _1 = bus.Subscribe<int>(i =>
         {
@@ -565,7 +565,7 @@ public sealed class EventBusBehaviorTests
     [Fact]
     public void HandlerDisposedMidPublish_StillRunsForThatEvent_ButNotTheNext()
     {
-        var bus = new EventBus();
+        var bus = new EventAggregator();
         IDisposable? second = null;
         var secondRuns = 0;
         using var _ = bus.Subscribe<string>(_ => second!.Dispose());
@@ -580,7 +580,7 @@ public sealed class EventBusBehaviorTests
     [Fact]
     public void HandlerSubscribedMidPublish_DoesNotRunForThatEvent()
     {
-        var bus = new EventBus();
+        var bus = new EventAggregator();
         var lateRuns = 0;
         using var _ = bus.Subscribe<string>(_ => bus.Subscribe<int>(__ => lateRuns++));
         using var __ = bus.Subscribe<string>(s => bus.Subscribe<string>(___ => lateRuns++));
@@ -593,7 +593,7 @@ public sealed class EventBusBehaviorTests
     [Fact]
     public void Publish_WithSubscribers_DoesNotAllocate()
     {
-        var bus = new EventBus();
+        var bus = new EventAggregator();
         var sink = 0;
         using var _ = bus.Subscribe<int>(i => sink += i);
         for (var i = 0; i < 1_000; i++)
@@ -616,7 +616,7 @@ public sealed class EventBusBehaviorTests
     [Fact]
     public void Dispose_RacingFromManyThreads_RemovesExactlyOneRegistration()
     {
-        var bus = new EventBus();
+        var bus = new EventAggregator();
         Action<int> shared = _ => { };
         var first = bus.Subscribe(shared);
         using var second = bus.Subscribe(shared);
@@ -629,7 +629,7 @@ public sealed class EventBusBehaviorTests
     [Fact]
     public async Task ConcurrentSubscribePublishUnsubscribe_NeverLosesOrDuplicatesDeliveries()
     {
-        var bus = new EventBus();
+        var bus = new EventAggregator();
         var stable = 0;
         using var _ = bus.Subscribe<int>(_ => Interlocked.Increment(ref stable));
         const int publishes = 20_000;
