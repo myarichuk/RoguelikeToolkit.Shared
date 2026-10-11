@@ -13,7 +13,8 @@
     },
     "src/RoguelikeToolkit.Determinism": {
       "release-type": "node",
-      "component": "determinism"
+      "component": "determinism",
+      "initial-version": "0.1.0"
     }
   }
 }
