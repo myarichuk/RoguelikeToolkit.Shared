@@ -1,6 +1,12 @@
-# .NET build outputs and project files — UPM ships sources, NuGet ships the compiled DLLs.
+# .NET build outputs and project files: UPM ships sources, NuGet ships the compiled DLLs.
+# A .meta must be excluded together with the file it describes, or Unity warns about an orphan.
 bin/
 obj/
 *.csproj
+*.csproj.meta
+PublicAPI.Shipped.txt
+PublicAPI.Shipped.txt.meta
+PublicAPI.Unshipped.txt
+PublicAPI.Unshipped.txt.meta
 *.user
 .vs/

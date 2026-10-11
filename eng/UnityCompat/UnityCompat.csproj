@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Compiles one package's sources the way Unity does, as a CI proxy for "will Unity compile this?":
+       C# 9, nullable context OFF (Unity ignores the csproj's <Nullable>), no analyzers, warnings are errors.
+       Usage: dotnet build eng/UnityCompat -p:PackageDir=src/RoguelikeToolkit.StateMachine
+       This standalone project deliberately bypasses the repo's Directory.Build.props / Directory.Packages.props. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnableNETAnalyzers>false</EnableNETAnalyzers>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <PackageDir Condition="'$(PackageDir)' == ''">$(MSBuildThisFileDirectory)../../src/RoguelikeToolkit.StateMachine</PackageDir>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(PackageDir)/**/*.cs" Exclude="$(PackageDir)/obj/**;$(PackageDir)/bin/**" />
+  </ItemGroup>
+</Project>

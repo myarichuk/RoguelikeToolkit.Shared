@@ -1,3 +1,5 @@
+#nullable enable
+
 namespace RoguelikeToolkit.StateMachine
 {
     /// <summary>Receives exactly one callback per committed transition.</summary>
