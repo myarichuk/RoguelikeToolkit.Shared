@@ -1,7 +1,7 @@
 {
   "name": "com.rogueliketoolkit.determinism",
   "displayName": "RoguelikeToolkit Determinism",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "unity": "2021.2",
   "description": "Seeded snapshot-able random generator with order-independent derived streams, and a thread-safe sequenced queue with a single-thread drain.",
   "license": "Apache-2.0",

@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.5.0](https://github.com/myarichuk/RoguelikeToolkit.Shared/compare/state-machine-v0.4.0...state-machine-v0.5.0) (2026-10-11)
+
+
+### ⚠ BREAKING CHANGES
+
+* **state-machine:** 
+
+### Features
+
+* **state-machine:** ordered branches, queued re-entrancy, Post/Pump, commit-and-report ([55ceaf6](https://github.com/myarichuk/RoguelikeToolkit.Shared/commit/55ceaf60969ecdde42aa9c4ba3e1f2fcb3d625e4))
+
 ## [0.4.0](https://github.com/myarichuk/RoguelikeToolkit.Shared/compare/state-machine-v0.3.0...state-machine-v0.4.0) (2026-10-10)
 
 
