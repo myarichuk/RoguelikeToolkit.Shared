@@ -172,14 +172,12 @@ public sealed class ContextStateMachineTests
     }
 
     [Fact]
-    public void Permit_Twice_ReplacesDestination()
+    public void Permit_AfterUnguardedBranch_Throws_BecauseItCouldNeverRun()
     {
         var machine = CreateChaseMachine(new EnemyCtx { CanSee = true });
-        machine.Configure(AiState.Idle).Permit(AiTrigger.PlayerSpotted, AiState.Attack);
 
-        machine.Fire(AiTrigger.PlayerSpotted);
-
-        Assert.Equal(AiState.Attack, machine.State);
+        Assert.Throws<InvalidOperationException>(() =>
+            machine.Configure(AiState.Chase).Permit(AiTrigger.InRange, AiState.Dead));
     }
 
     [Fact]
@@ -301,22 +299,45 @@ public sealed class ContextStateMachineTests
     }
 
     [Fact]
-    public void Entry_Throwing_CommitsState_ButSkipsSink()
+    public void Entry_Throwing_CommitsState_NotifiesSinkWithError_AndRethrows()
     {
         var sink = new RecordingSink();
         var machine = CreateChaseMachine(new EnemyCtx { CanSee = true }, sink);
-        machine.Configure(AiState.Chase).OnEntry(_ => throw new InvalidOperationException("entry boom"));
+        var secondEntryRan = false;
+        machine.Configure(AiState.Chase)
+            .OnEntry(_ => throw new InvalidOperationException("entry boom"))
+            .OnEntry(_ => secondEntryRan = true);
 
-        Assert.Throws<InvalidOperationException>(() => machine.Fire(AiTrigger.PlayerSpotted));
+        var thrown = Assert.Throws<InvalidOperationException>(() => machine.Fire(AiTrigger.PlayerSpotted));
 
+        Assert.Equal("entry boom", thrown.Message);
         Assert.Equal(AiState.Chase, machine.State);
-        Assert.Equal(0, machine.Sequence);
-        Assert.Empty(sink.Transitions);
+        Assert.Equal(1, machine.Sequence);
+        Assert.False(secondEntryRan);
+        var recorded = Assert.Single(sink.Transitions);
+        Assert.True(recorded.HasFailed);
+        Assert.Same(thrown, recorded.Error);
+        Assert.Equal(AiState.Idle, recorded.From);
+        Assert.Equal(AiState.Chase, recorded.To);
 
         // Machine stays usable for onward transitions.
         machine.Fire(AiTrigger.InRange);
         Assert.Equal(AiState.Attack, machine.State);
-        Assert.Equal(1, machine.Sequence);
+        Assert.Equal(2, machine.Sequence);
+    }
+
+    [Fact]
+    public void Entry_AndSink_BothThrowing_SurfaceAsAggregate()
+    {
+        var machine = CreateChaseMachine(new EnemyCtx { CanSee = true }, new ThrowingSink());
+        machine.Configure(AiState.Chase).OnEntry(_ => throw new ArgumentException("entry boom"));
+
+        var aggregate = Assert.Throws<AggregateException>(() => machine.Fire(AiTrigger.PlayerSpotted));
+
+        Assert.Collection(
+            aggregate.InnerExceptions,
+            e => Assert.IsType<ArgumentException>(e),
+            e => Assert.Equal("sink boom", e.Message));
     }
 
     [Fact]
@@ -324,7 +345,6 @@ public sealed class ContextStateMachineTests
     {
         var ctx = new EnemyCtx { CanSee = true };
         var machine = CreateChaseMachine(ctx, new ThrowingSink());
-        machine.Configure(AiState.Chase).Permit(AiTrigger.PlayerLost, AiState.Idle);
 
         Assert.Throws<InvalidOperationException>(() => machine.Fire(AiTrigger.PlayerSpotted));
         Assert.Equal(AiState.Chase, machine.State);
@@ -332,36 +352,47 @@ public sealed class ContextStateMachineTests
     }
 
     [Fact]
-    public void ReentrantFire_FromEntry_Throws()
+    public void ReentrantFire_FromEntry_IsQueuedAndRunsAfterTheCurrentTransition()
     {
         StateMachine<AiState, AiTrigger, EnemyCtx>? machine = null;
         var sink = new RecordingSink();
         machine = new StateMachine<AiState, AiTrigger, EnemyCtx>(AiState.Idle, new EnemyCtx { CanSee = true }, sink);
+        var stateSeenByEntry = AiState.Dead;
         machine.Configure(AiState.Idle).Permit(AiTrigger.PlayerSpotted, AiState.Chase);
-        machine.Configure(AiState.Chase).OnEntry(_ => machine!.Fire(AiTrigger.PlayerLost));
+        machine.Configure(AiState.Chase)
+            .Permit(AiTrigger.PlayerLost, AiState.Idle)
+            .OnEntry(_ =>
+            {
+                machine!.Fire(AiTrigger.PlayerLost);
+                stateSeenByEntry = machine.State; // the queued trigger has not run yet
+            });
 
-        Assert.Throws<InvalidOperationException>(() => machine.Fire(AiTrigger.PlayerSpotted));
-        Assert.Equal(AiState.Chase, machine.State);
-        Assert.Empty(sink.Transitions);
+        machine.Fire(AiTrigger.PlayerSpotted);
+
+        Assert.Equal(AiState.Chase, stateSeenByEntry);
+        Assert.Equal(AiState.Idle, machine.State);
+        Assert.Equal(2, machine.Sequence);
+        Assert.Equal(new[] { 1L, 2L }, sink.Transitions.ConvertAll(t => t.Sequence));
     }
 
     [Fact]
-    public void ReentrantFire_FromExit_Throws_AndStateStaysPut()
+    public void ReentrantFire_FromExit_IsQueuedAndRunsAfterTheCurrentTransition()
     {
         StateMachine<AiState, AiTrigger, EnemyCtx>? machine = null;
         var sink = new RecordingSink();
         machine = new StateMachine<AiState, AiTrigger, EnemyCtx>(AiState.Idle, new EnemyCtx { CanSee = true }, sink);
         machine.Configure(AiState.Idle).Permit(AiTrigger.PlayerSpotted, AiState.Chase);
         machine.Configure(AiState.Idle).OnExit(_ => machine!.Fire(AiTrigger.PlayerSpotted));
+        machine.Configure(AiState.Chase).Permit(AiTrigger.PlayerSpotted, AiState.Attack);
 
-        Assert.Throws<InvalidOperationException>(() => machine.Fire(AiTrigger.PlayerSpotted));
-        Assert.Equal(AiState.Idle, machine.State);
-        Assert.Equal(0, machine.Sequence);
-        Assert.Empty(sink.Transitions);
+        machine.Fire(AiTrigger.PlayerSpotted);
+
+        Assert.Equal(AiState.Attack, machine.State);
+        Assert.Equal(2, machine.Sequence);
     }
 
     [Fact]
-    public void ReentrantFire_FromSink_Throws()
+    public void ReentrantFire_FromSink_IsQueuedAndRunsAfterTheCurrentTransition()
     {
         StateMachine<AiState, AiTrigger, EnemyCtx>? machine = null;
         machine = new StateMachine<AiState, AiTrigger, EnemyCtx>(
@@ -369,9 +400,12 @@ public sealed class ContextStateMachineTests
         machine.Configure(AiState.Idle).Permit(AiTrigger.PlayerSpotted, AiState.Chase);
         machine.Configure(AiState.Chase).Permit(AiTrigger.PlayerLost, AiState.Idle);
 
-        Assert.Throws<InvalidOperationException>(() => machine.Fire(AiTrigger.PlayerSpotted));
-        Assert.Equal(AiState.Chase, machine.State);
-        Assert.Equal(1, machine.Sequence);
+        // The sink re-fires on every transition: Idle -> Chase -> Idle (PlayerLost has no onward rule from Idle).
+        var thrown = Assert.Throws<InvalidOperationException>(() => machine.Fire(AiTrigger.PlayerSpotted));
+
+        Assert.Contains("Cannot fire trigger 'PlayerLost' from state 'Idle'", thrown.Message);
+        Assert.Equal(AiState.Idle, machine.State);
+        Assert.Equal(2, machine.Sequence);
     }
 
     [Fact]
