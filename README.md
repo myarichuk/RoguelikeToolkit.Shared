@@ -5,14 +5,14 @@
 
 Small .NET building blocks for roguelike (and other) games. Apache-2.0.
 
-- `RoguelikeToolkit.EventAggregator` — synchronous in-process pub/sub.
-- `RoguelikeToolkit.StateMachine` — FSM with shared context, guards, entry/exit actions.
+- `RoguelikeToolkit.EventAggregator` — synchronous in-process pub/sub (`EventBus`). Thread-safe; publishing allocates nothing.
+- `RoguelikeToolkit.StateMachine` — FSM with shared context, ordered guarded branches, entry/exit actions. Thread-safe; `Post` from any thread and `Pump` on yours (e.g. Unity's main thread) without the machine knowing about Unity.
 
 Both target `netstandard2.1` (Unity 2021.2+) with zero dependencies. Language is capped at C# 9 in `src/` so the shipped DLLs stay runnable on older Unity runtimes. Tests are xUnit under `tests/`.
 
 ## Use
 
-Unity (UPM), via git URL for now:
+Unity (UPM), via git URL for now. **Experimental:** the packages ship no `.meta` files yet, which Unity may need to import them from an immutable package folder, so this path is unverified:
 
 - `https://github.com/myarichuk/RoguelikeToolkit.Shared.git?path=/src/RoguelikeToolkit.EventAggregator`
 - `https://github.com/myarichuk/RoguelikeToolkit.Shared.git?path=/src/RoguelikeToolkit.StateMachine`
